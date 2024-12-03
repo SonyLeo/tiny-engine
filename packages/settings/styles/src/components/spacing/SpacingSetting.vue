@@ -21,7 +21,7 @@
       </ul>
     </div>
   </div>
-  <reset-button v-show="isReset" class="reset" @reset="reset" />
+  <reset-button v-show="isReset" @reset="reset" />
 </template>
 
 <script>
@@ -61,6 +61,10 @@ export default {
       props.property.value?.indexOf('px') > -1 ? Number.parseInt(props.property.value) : props.property.value
     )
 
+    const updateStyle = (value) => {
+      emit('update', { [props.property.name]: value })
+    }
+
     const sliderChange = () => {
       if (sliderFlag) {
         updateStyle(`${sliderValue.value}px`)
@@ -83,11 +87,7 @@ export default {
 
     const reset = () => {
       sliderFlag = false
-      updateStyle('')
-    }
-
-    const updateStyle = (value) => {
-      emit('update', { [props.property.name]: value })
+      updateStyle(null)
     }
 
     const inputChange = (property) => {
@@ -113,6 +113,8 @@ export default {
 
 <style lang="less" scoped>
 .content-wrap {
+  width: 236px;
+  margin-bottom: 10px;
   .content-input {
     display: flex;
     justify-content: flex-start;
@@ -229,9 +231,5 @@ export default {
       }
     }
   }
-}
-
-.reset {
-  margin-top: 10px;
 }
 </style>

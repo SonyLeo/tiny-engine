@@ -3,17 +3,19 @@
     <div class="label">使用插槽</div>
     <tiny-form ref="slotRef" class="slot-form" :model="slotList" label-width="0" inline>
       <div v-for="(slot, index) in slotList" :key="slot.name" class="use-slot">
-        <div class="use-slot-item-name">{{ slot.name }}</div>
+        <div class="use-slot-item-name">
+          {{ slot.name }}
+          <tiny-tooltip effect="dark" :content="state.currentComponent?.content" placement="top">
+            <span class="item-icon">
+              <component :is="state.currentComponent?.icon"></component>
+            </span>
+          </tiny-tooltip>
+        </div>
         <div class="use-slot-item-content">
           <div class="use-slot-switch-wrap">
             <div :class="['e__switch', { 'e_is-checked': slot.bind }]">
               <span class="e__switch-core" @click="toggleSlot(index, slot)"></span>
             </div>
-            <tiny-tooltip effect="dark" :content="state.currentComponent?.content" placement="top">
-              <span class="item-icon">
-                <component :is="state.currentComponent?.icon"></component>
-              </span>
-            </tiny-tooltip>
           </div>
           <tiny-form-item
             :prop="paramsPropPath(index)"
@@ -191,6 +193,7 @@ export default {
 
   .use-slot-switch-wrap {
     display: flex;
+    align-items: center;
   }
 
   &-item-name {
@@ -214,7 +217,7 @@ export default {
   }
 
   .item-icon {
-    margin: 3px 3px 0 6px;
+    margin: 0 3px 0 6px;
   }
 }
 
@@ -234,11 +237,11 @@ export default {
   position: relative;
   width: 60px;
   height: 20px;
-  border: 1px solid var(--ti-lowcode-base-bg);
+  border: none;
   outline: 0;
   border-radius: 10px;
   box-sizing: border-box;
-  background: var(--ti-lowcode-base-bg);
+  background-color: var(--te-common-bg-switch);
   transition: border-color 0.3s, background-color 0.3s;
   vertical-align: middle;
 }
@@ -252,12 +255,11 @@ export default {
   transition: all 0.3s;
   width: 16px;
   height: 16px;
-  background-color: #ffffff;
+  background-color: var(--te-common-bg-default);
 }
 
 .e__switch.e_is-checked .e__switch-core {
-  border-color: var(--ti-lowcode-base-blue-6);
-  background-color: var(--ti-lowcode-base-blue-6);
+  background-color: var(--te-common-bg-primary-checked);
 }
 
 .e__switch.e_is-checked .e__switch-core::after {

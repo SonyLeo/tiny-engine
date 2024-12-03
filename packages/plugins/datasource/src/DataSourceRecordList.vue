@@ -11,29 +11,14 @@
   >
     <template #content>
       <div class="actions">
-        <tiny-link
-          type="primary"
-          class="addButton"
-          :underline="false"
-          :disabled="!allowCreate"
-          @click.stop="insertNewData"
-          ><icon-plusCircle class="tiny-svg-size icon-plusCircle"></icon-plusCircle>新增静态数据</tiny-link
+        <tiny-button plain :disabled="!allowCreate" @click.stop="insertNewData"
+          ><icon-plus class="btn-icon"></icon-plus>新增静态数据</tiny-button
         >
-        <tiny-link
-          type="primary"
-          class="importButton"
-          :underline="false"
-          :disabled="!allowCreate"
-          @click.stop="showImportModal(true)"
-          ><icon-import class="tiny-svg-size icon-import"></icon-import>批量导入</tiny-link
+        <tiny-button plain :disabled="state.isBatchDeleteDisable" @click.stop="batchDelete"
+          ><svg-icon class="btn-icon" name="delete"></svg-icon>删除</tiny-button
         >
-        <tiny-link
-          type="primary"
-          class="box-all-delete"
-          :underline="false"
-          :disabled="state.isBatchDeleteDisable"
-          @click.stop="batchDelete"
-          ><span class="all-delete">批量删除</span></tiny-link
+        <tiny-button plain :disabled="!allowCreate" @click.stop="showImportModal(true)"
+          ><icon-upload class="btn-icon"></icon-upload>批量导入</tiny-button
         >
         <tiny-link type="primary" class="download" :underline="false" @click="download"
           ><icon-download class="tiny-svg-size icon-download"></icon-download>下载导入模板</tiny-link
@@ -95,8 +80,8 @@
 <script lang="jsx">
 import { reactive, ref, watchEffect, watch, computed } from 'vue'
 import { camelize, capitalize } from '@vue/shared'
-import { Grid, Pager, Input, Numeric, DatePicker, Switch, Slider, Link } from '@opentiny/vue'
-import { IconPlusCircle, IconImport } from '@opentiny/vue-icon'
+import { Grid, Pager, Input, Numeric, DatePicker, Switch, Slider, Link, Button } from '@opentiny/vue'
+import { iconPlus, iconUpload } from '@opentiny/vue-icon'
 import { PluginSetting } from '@opentiny/tiny-engine-common'
 import { utils } from '@opentiny/tiny-engine-utils'
 import { useModal, useLayout, useNotify, useCanvas } from '@opentiny/tiny-engine-meta-register'
@@ -121,7 +106,10 @@ export default {
     PluginSetting,
     TinyPager: Pager,
     DataSourceRecordUpload,
-    TinyLink: Link
+    TinyLink: Link,
+    TinyButton: Button,
+    IconPlus: iconPlus(),
+    IconUpload: iconUpload()
   },
   props: {
     // 数据源对象
@@ -385,12 +373,8 @@ export default {
           slots: {
             default: ({ row }) => (
               <div class="option-container">
-                <Button type="text" size="mini" class="option-button" onClick={() => handleCopy(row)}>
-                  复制
-                </Button>
-                <Button type="text" size="mini" class="option-button" onClick={() => handleDelete(row)}>
-                  删除
-                </Button>
+                <svg-icon name="copy" onClick={() => handleCopy(row)}></svg-icon>
+                <svg-icon name="delete" onClick={() => handleDelete(row)}></svg-icon>
               </div>
             )
           }
@@ -581,8 +565,6 @@ export default {
       saveRecordFormData,
       getGridData,
       saveRecordList,
-      IconPlusCircle: IconPlusCircle(),
-      IconImport: IconImport(),
       download,
       showImportModal,
       batchDelete,
@@ -605,34 +587,35 @@ export default {
 .actions {
   display: flex;
   justify-content: left;
-  align-items: center;
-  margin: 16px 0 30px 0;
+  margin: 16px 0;
   .box-all-delete {
     margin: 1px 5px 0 5px;
     .all-delete {
       font-size: 14px;
     }
   }
+  :deep(.tiny-button--default) {
+    height: 24px;
+    line-height: 24px;
+    display: flex;
+    align-items: center;
+    border: 1px solid var(--ti-lowcode-i18n-button-border-color);
+    border-radius: 4px;
+  }
+  .btn-icon {
+    margin-right: 6px;
+    color: var(--ti-lowcode-datasource-tip-color);
+    font-size: 12px;
+  }
   .download {
     margin: 0 12px;
-    font-size: 14px;
+    text-decoration: underline;
+    display: inline-block;
+    font-size: 12px;
+    text-align: left;
+    padding: 0;
+    color: var(--ti-lowcode-base-text-color);
     .icon-download {
-      margin: 0 1px 4px 0;
-      font-size: 16px;
-    }
-  }
-  .addButton {
-    margin: 0 12px;
-    font-size: 14px;
-    .icon-plusCircle {
-      margin: 0 1px 4px 0;
-      font-size: 16px;
-    }
-  }
-  .importButton {
-    margin: 0 12px;
-    font-size: 14px;
-    .icon-import {
       margin: 0 1px 4px 0;
       font-size: 16px;
     }
@@ -659,86 +642,17 @@ export default {
   width: 642px;
   :deep(.option-container) {
     display: flex;
-    justify-content: center;
-    .option-button {
-      padding: 0;
-    }
-    .option-button + .option-button {
-      margin-left: 6px;
+    align-items: center;
+    .svg-icon {
+      margin-right: 10px;
     }
   }
 }
 
 .record-list-data {
-  margin-top: -20px;
-  :deep(.tiny-grid) {
-    background-color: var(--ti-lowcode-datasource-toolbar-bg);
-    .tiny-grid__header-wrapper {
-      background-color: var(--ti-lowcode-datasource-toolbar-view-hover-bg);
-      .tiny-grid-header__column {
-        color: var(--ti-lowcode-datasource-toolbar-breadcrumb-color);
-        height: 39px;
-      }
-
-      .tiny-grid__repair {
-        border-color: var(--ti-lowcode-datasource-tabs-border-color);
-      }
-
-      .tiny-grid-resizable.is__line:before {
-        background-color: var(--ti-lowcode-datasource-tabs-border-color);
-      }
-      .tiny-grid-checkbox__icon {
-        svg {
-          color: var(--ti-lowcode-datasource-common-primary-color);
-        }
-      }
-    }
-    .tiny-grid__body-wrapper {
-      &::-webkit-scrollbar {
-        height: 10px;
-      }
-      .tiny-grid-body__column {
-        height: 44px;
-        .copy-data {
-          svg {
-            margin-left: 5px;
-          }
-        }
-      }
-
-      .tiny-grid-body__row,
-      .tiny-grid-body__row:not(.row__hover):nth-child(2n) {
-        background-image: linear-gradient(
-          -180deg,
-          var(--ti-lowcode-datasource-tabs-border-color),
-          var(--ti-lowcode-datasource-tabs-border-color)
-        );
-        background-repeat: no-repeat;
-        background-size: 100% 1px;
-        background-position: 100% 100%;
-        &.row__current {
-          background-color: var(--ti-lowcode-datasource-toolbar-view-hover-bg);
-        }
-      }
-
-      .tiny-grid-body__row {
-        &.row__selected {
-          .tiny-grid-checkbox__icon {
-            svg {
-              color: var(--ti-lowcode-datasource-common-primary-color);
-              width: 100%;
-              height: 100%;
-            }
-          }
-        }
-      }
-    }
-
-    .tiny-grid__empty-text {
-      color: var(--ti-lowcode-datasource-toolbar-breadcrumb-color);
-    }
+  :deep(.tiny-grid.tiny-grid-editable .tiny-grid-body__column.col__ellipsis) {
+    padding-left: 8px;
   }
-
   :deep(.data-source-list-pager) {
     padding-right: 8px;
     .tiny-pager__pages {

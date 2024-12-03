@@ -12,10 +12,25 @@
 
 import { h, provide, inject, nextTick, shallowReactive, reactive, ref, watch, watchEffect } from 'vue'
 import { I18nInjectionKey } from 'vue-i18n'
+import TinyVue from '@opentiny/vue'
+import * as TinyVueIcon from '@opentiny/vue-icon'
 import { useBroadcastChannel } from '@vueuse/core'
 import { constants, utils as commonUtils } from '@opentiny/tiny-engine-utils'
 import renderer, { parseData, setConfigure, setController, globalNotify, isStateAccessor } from './render'
-import { getNode as getNodeById, clearNodes, getRoot, setContext, getContext, setCondition, context } from './context'
+import {
+  getNode as getNodeById,
+  clearNodes,
+  getRoot,
+  setContext,
+  getContext,
+  setCondition,
+  getCondition,
+  getConditions,
+  context,
+  setNode,
+  getDesignMode,
+  setDesignMode
+} from './context'
 import CanvasEmpty from './CanvasEmpty.vue'
 
 const { BROADCAST_CHANNEL } = constants
@@ -37,15 +52,13 @@ const globalState = ref([])
 const stores = shallowReactive({})
 const dataSourceMap = shallowReactive({})
 
-const Func = Function
-
 watchEffect(() => {
   reset(stores)
   globalState.value.forEach(({ id, state = {}, getters = {} }) => {
     const computedGetters = Object.keys(getters).reduce(
       (acc, key) => ({
         ...acc,
-        [key]: new Func('return ' + getters[key].value)().call(acc, state)
+        [key]: parseData(getters[key], state, acc)
       }),
       {}
     )
@@ -63,13 +76,13 @@ const setUtils = (data, clear, isForceRefresh) => {
   const utilsCollection = {}
   // 目前画布还不具备远程加载utils工具类的功能，目前只能加载TinyVue组件库中的组件工具
   data?.forEach((item) => {
-    const util = window.TinyVue[item.content.exportName]
+    const util = TinyVue[item.content.exportName]
     if (util) {
       utilsCollection[item.name] = util
     }
 
     // 此处需要把工具类中的icon图标也加入utils上下文环境
-    const utilIcon = window.TinyVueIcon[item.content.exportName]
+    const utilIcon = TinyVueIcon[item.content.exportName]
     if (utilIcon) {
       utilsCollection[item.name] = utilIcon
     }
@@ -345,6 +358,35 @@ const setSchema = async (data) => {
 
 const getNode = (id, parent) => (id ? getNodeById(id, parent) : schema)
 
+let canvasRenderer = null
+
+const defaultRenderer = function () {
+  // 渲染画布增加根节点，与出码和预览保持一致
+  const rootChildrenSchema = {
+    componentName: 'div',
+    // 手动添加一个唯一的属性，后续在画布选中此节点时方便处理额外的逻辑。由于没有修改schema，不会影响出码
+    props: { ...schema.props, 'data-id': 'root-container' },
+    children: schema.children
+  }
+
+  return h(
+    'tiny-i18n-host',
+    {
+      locale: 'zh_CN',
+      key: refreshKey.value,
+      ref: 'page',
+      className: 'design-page'
+    },
+    schema.children?.length ? h(renderer, { schema: rootChildrenSchema, parent: schema }) : [h(CanvasEmpty)]
+  )
+}
+
+const getRenderer = () => canvasRenderer || defaultRenderer
+
+const setRenderer = (fn) => {
+  canvasRenderer = fn
+}
+
 export default {
   setup() {
     provide('rootSchema', schema)
@@ -376,23 +418,7 @@ export default {
     )
   },
   render() {
-    // 渲染画布增加根节点，与出码和预览保持一致
-    const rootChildrenSchema = {
-      componentName: 'div',
-      props: schema.props,
-      children: schema.children
-    }
-
-    return h(
-      'tiny-i18n-host',
-      {
-        locale: 'zh_CN',
-        key: refreshKey.value,
-        ref: 'page',
-        className: 'design-page'
-      },
-      schema.children?.length ? h(renderer, { schema: rootChildrenSchema, parent: schema }) : [h(CanvasEmpty)]
-    )
+    return getRenderer().call(this)
   }
 }
 
@@ -419,8 +445,15 @@ export const api = {
   getRoot,
   setPagecss,
   setCondition,
+  getCondition,
+  getConditions,
   getGlobalState,
   getDataSourceMap,
   setDataSourceMap,
-  setGlobalState
+  setGlobalState,
+  setNode,
+  getRenderer,
+  setRenderer,
+  getDesignMode,
+  setDesignMode
 }

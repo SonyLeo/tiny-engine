@@ -5,17 +5,24 @@
         v-for="(item, index) in dataSourceList"
         :key="item.id"
         :class="['datasource-list-item', index === activeIndex ? 'active' : '']"
-        @mouseenter="showSettingIcon(index)"
-        @mousedown.stop="openRecordListPanel(item, index)"
       >
         <div class="item-label">
-          {{ item.name }}
+          <div class="item-name">
+            <svg-button name="plugin-icon-data" class="plugin-icon-data"> </svg-button>
+            {{ item.name }}
+          </div>
           <div class="item-handler">
+            <svg-button
+              class="set-page"
+              tips="编辑静态数据"
+              name="data-edit"
+              @mousedown.stop.prevent="openRecordListPanel(item, index)"
+            >
+            </svg-button>
             <svg-button
               class="set-page"
               tips="设置数据源"
               name="text-source-setting"
-              v-if="state.showSetting && index === state.hoverIndex"
               @mousedown.stop.prevent="openDataSourceForm(item, index)"
             >
             </svg-button>
@@ -32,7 +39,7 @@
 
 <script>
 import { onMounted, reactive, ref } from 'vue'
-import { useApp, useDataSource, useResource, useCanvas } from '@opentiny/tiny-engine-meta-register'
+import { useDataSource, useResource, useCanvas, getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
 import { close as closeRemotePanel } from './DataSourceRemotePanel.vue'
 import { close as closeDataSourceForm } from './DataSourceForm.vue'
 import DataSourceRecordList, { open as openRecordList } from './DataSourceRecordList.vue'
@@ -45,10 +52,8 @@ const dataSourceList = ref([])
 const activeIndex = ref(-1)
 
 export const refresh = () => {
-  const { appInfoState } = useApp()
-
   const url = new URLSearchParams(location.search)
-  const selectedId = appInfoState.selectedId || url.get('id')
+  const selectedId = getMetaApi(META_SERVICE.GlobalService).getBaseInfo().id || url.get('id')
   fetchDataSourceList(selectedId).then((data) => {
     dataSourceList.value = data
     useCanvas().canvasApi.value.setDataSourceMap(data)
@@ -67,8 +72,6 @@ export default {
   emits: ['edit'],
   setup(props, { emit }) {
     const state = reactive({
-      showSetting: false,
-      hoverIndex: 0,
       currentData: { name: '', columns: [], data: [] }
     })
 
@@ -77,11 +80,6 @@ export default {
     onMounted(() => {
       dataSourceList.value = useResource().resState.dataSource
     })
-
-    const showSettingIcon = (itemIndex) => {
-      state.hoverIndex = itemIndex
-      state.showSetting = true
-    }
 
     // 打开新增数据面板
     const openRecordListPanel = (item, index) => {
@@ -109,7 +107,6 @@ export default {
 
     return {
       state,
-      showSettingIcon,
       openRecordListPanel,
       openDataSourceForm,
       dataSourceList,
@@ -129,30 +126,50 @@ export default {
   overflow-x: hidden;
   .datasource-list {
     flex-grow: 1;
+    padding-top: 12px;
+    border-top: 1px solid var(--ti-lowcode-data-source-border-color);
   }
   .datasource-list-item {
     box-shadow: var(--ti-lowcode-datasource-tabs-border-color) 0, -1px;
-    height: 40px;
+    height: 24px;
+    line-height: 24px;
     align-items: center;
     display: grid;
-    padding-left: 4px;
-    padding-right: 12px;
+    padding: 0 12px;
     position: relative;
     color: var(--ti-lowcode-datasource-common-text-main-color);
     cursor: pointer;
     &:hover,
     &.active {
       background: var(--ti-lowcode-datasource-list-hover-color);
+      .item-handler {
+        display: inline-block;
+      }
     }
     .item-label {
       overflow: hidden;
       text-overflow: ellipsis;
-      margin-left: 10px;
       display: flex;
+      align-items: center;
       justify-content: space-between;
+      color: var(--ti-lowcode-base-gray-90);
+      .item-name {
+        display: flex;
+        align-items: center;
+      }
+      .plugin-icon-data {
+        margin-right: 8px;
+        width: 18px;
+      }
     }
     .item-handler {
-      svg {
+      height: 24px;
+      line-height: 24px;
+      display: none;
+      .svg-button {
+        width: 16px;
+        height: 16px;
+        margin-top: 6px;
         color: var(--ti-lowcode-datasource-toolbar-more-hover-color);
       }
     }

@@ -1,23 +1,17 @@
 <template>
-  <tiny-popover
-    trigger="hover"
-    :open-delay="1000"
-    popper-class="toolbar-right-popover"
-    append-to-body
+  <toolbar-base
     content="画布中英文切换"
+    :icon="options.icon.default || options.icon"
+    :options="options"
+    @click-api="changeLang"
   >
-    <template #reference>
-      <span class="icon">
-        <svg-icon :name="langVal === options[0].value ? 'cn' : 'en'" @click="changeLang"></svg-icon>
-      </span>
-    </template>
-  </tiny-popover>
+  </toolbar-base>
 </template>
 
 <script>
 import { ref, watch } from 'vue'
 import { useBroadcastChannel } from '@vueuse/core'
-import { Popover } from '@opentiny/vue'
+import { ToolbarBase } from '@opentiny/tiny-engine-common'
 
 import { constants } from '@opentiny/tiny-engine-utils'
 
@@ -25,12 +19,16 @@ const { BROADCAST_CHANNEL } = constants
 
 export default {
   components: {
-    TinyPopover: Popover
+    ToolbarBase
   },
   props: {
     langChannel: {
       type: String,
       default: BROADCAST_CHANNEL.CanvasLang
+    },
+    options: {
+      type: Object,
+      default: () => ({})
     }
   },
   setup(props) {
@@ -41,7 +39,7 @@ export default {
       langVal.value = data.value
     })
 
-    const options = [
+    const langOptions = [
       {
         value: 'zh_CN',
         label: '中文'
@@ -52,11 +50,11 @@ export default {
       }
     ]
     const changeLang = () => {
-      langVal.value = langVal.value === options[0].value ? options[1].value : options[0].value
+      langVal.value = langVal.value === langOptions[0].value ? langOptions[1].value : langOptions[0].value
       post(langVal.value)
     }
     return {
-      options,
+      langOptions,
       langVal,
       changeLang
     }

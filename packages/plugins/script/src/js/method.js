@@ -18,7 +18,6 @@ import { lint } from '@opentiny/tiny-engine-common/js/linter'
 import { isFunction } from '@opentiny/vue-renderless/grid/static'
 
 const { SCHEMA_DATA_TYPE } = constants
-const { message, confirm } = useModal()
 
 const state = reactive({
   linterWorker: null,
@@ -47,7 +46,14 @@ export const getMethodContentList = () => Object.values(getMethods()).map((metho
 const getScriptString = () => {
   const list = Object.entries(getMethods()).map(([name, method]) => insertName(name, method.value))
   const script = list.join(`\n`)
-  scriptAst = string2Ast(script)
+  try {
+    scriptAst = string2Ast(script)
+  } catch (error) {
+    useNotify({
+      type: 'error',
+      message: `代码静态检查有错误：${error}`
+    })
+  }
   return script
 }
 
@@ -81,6 +87,7 @@ export const saveMethod = ({ name, content }) => {
 }
 
 const saveMethods = () => {
+  const { message } = useModal()
   if (!state.isChanged) {
     return false
   }
@@ -124,6 +131,7 @@ const saveMethods = () => {
 }
 
 const close = (emit) => (callback) => {
+  const { confirm } = useModal()
   const callbackFn = isFunction(callback) ? callback : () => emit('close')
   if (!state.isChanged) {
     callbackFn(true)

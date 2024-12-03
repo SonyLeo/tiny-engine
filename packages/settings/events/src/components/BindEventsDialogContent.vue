@@ -13,27 +13,13 @@
     </div>
     <div :class="['content-right-bottom', { 'tip-error': !context.isValidParams }]">
       <div class="content-right-title">
-        <span class="set-params-tip">扩展参数设置</span>
-        <tiny-popover placement="top-start" width="350" trigger="hover">
-          <template #reference>
-            <icon-help-query></icon-help-query>
-          </template>
-          <p>
-            扩展参数：调用当前事件传入的真实参数，数组格式，追加在原有事件参数之后<br />
-            如:
-            {{ context.bindMethodInfo.name }}(eventArgs, extParam1, extParam2, ...)
-          </p>
-        </tiny-popover>
-
-        <tiny-switch v-model="context.enableExtraParams" class="set-switch" :show-text="true">
-          <template #open>
-            <span>开启</span>
-          </template>
-          <template #close>
-            <span>关闭</span>
-          </template>
-        </tiny-switch>
+        <tiny-checkbox v-model="context.enableExtraParams" name="tiny-checkbox">扩展参数设置</tiny-checkbox>
+        <div class="set-params-tip">
+          <div>扩展参数：调用当前事件传入的真实参数，数组格式，追加在原有事件参数之后</div>
+          如: {{ context.bindMethodInfo.name }}(eventArgs, extParam1, extParam2, ...)
+        </div>
       </div>
+
       <div class="content-right-monaco">
         <monaco-editor
           v-if="dialogVisible"
@@ -53,9 +39,8 @@
 
 <script>
 import { VueMonaco } from '@opentiny/tiny-engine-common'
-import { useLayout } from '@opentiny/tiny-engine-meta-register'
-import { Input, Popover, Switch } from '@opentiny/vue'
-import { iconHelpQuery } from '@opentiny/vue-icon'
+import { getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
+import { Input, Checkbox } from '@opentiny/vue'
 import { inject } from 'vue'
 import { METHOD_TIPS_MAP, NEW_METHOD_TYPE, VALID_VARNAME_RE } from './constants'
 
@@ -63,16 +48,13 @@ export default {
   components: {
     MonacoEditor: VueMonaco,
     TinyInput: Input,
-    TinyPopover: Popover,
-    IconHelpQuery: iconHelpQuery(),
-    TinySwitch: Switch
+    TinyCheckbox: Checkbox
   },
   props: {
     dialogVisible: Boolean
   },
   setup() {
-    const { PLUGIN_NAME, getPluginApi } = useLayout()
-    const { getMethodNameList } = getPluginApi(PLUGIN_NAME.PageController)
+    const { getMethodNameList } = getMetaApi(META_APP.Page)
 
     const context = inject('context')
 
@@ -111,7 +93,7 @@ export default {
         }
       }
       context.tipError = false
-      context.tip = METHOD_TIPS_MAP.default
+      context.tip = ''
     }
 
     return {
@@ -164,14 +146,11 @@ export default {
   }
   .content-right-top .content-right-title,
   .content-right-bottom .content-right-title {
-    font-weight: 600;
-    margin-bottom: 12px;
+    margin-bottom: var(--te-common-vertical-item-spacing-normal);
     .set-params-tip {
-      margin-right: 3px;
-    }
-    .set-switch {
-      width: 60px;
-      margin-left: 10px;
+      margin-top: 6px;
+      font-weight: 400;
+      color: var(--te-common-text-weaken);
     }
   }
 

@@ -3,7 +3,6 @@
     <template #header>
       <button-group>
         <tiny-button type="primary" @click="savePageSetting">保存</tiny-button>
-        <svg-button v-if="!pageSettingState.isNew" name="delete" tips="删除页面" @click="deletePage"></svg-button>
         <svg-button
           v-if="!pageSettingState.isNew"
           name="text-copy-page"
@@ -11,15 +10,16 @@
           tips="复制页面"
           @click="copyPage"
         ></svg-button>
+        <svg-button v-if="!pageSettingState.isNew" name="delete" tips="删除页面" @click="deletePage"></svg-button>
+        <svg-button class="close-plugin-setting-icon" name="close" @click="cancelPageSetting"></svg-button>
       </button-group>
-      <svg-button class="close-plugin-setting-icon" name="close" @click="cancelPageSetting"></svg-button>
     </template>
 
     <template #content>
       <div class="page-setting-content">
         <tiny-collapse v-model="state.activeName" class="page-setting-collapse">
           <tiny-collapse-item title="基本设置" :name="PAGE_SETTING_SESSION.general">
-            <page-general ref="pageGeneralRef" :isFolder="isFolder"></page-general>
+            <component :is="pageGeneral" ref="pageGeneralRef" :isFolder="isFolder"></component>
           </tiny-collapse-item>
 
           <tiny-collapse-item
@@ -36,10 +36,12 @@
             title="页面生命周期配置"
             :name="PAGE_SETTING_SESSION.lifeCycles"
           >
-            <life-cycles
-              :bindLifeCycles="pageSettingState.currentPageData.page_content?.lifeCycles"
-              @updatePageLifeCycles="updatePageLifeCycles"
-            ></life-cycles>
+            <div class="life-cycles-container">
+              <life-cycles
+                :bindLifeCycles="pageSettingState.currentPageData.page_content?.lifeCycles"
+                @updatePageLifeCycles="updatePageLifeCycles"
+              ></life-cycles>
+            </div>
           </tiny-collapse-item>
 
           <tiny-collapse-item class="history-source" title="历史备份" :name="PAGE_SETTING_SESSION.history">
@@ -55,15 +57,24 @@
 import { reactive, ref } from 'vue'
 import { Button, Collapse, CollapseItem, Input } from '@opentiny/vue'
 import { PluginSetting, ButtonGroup, SvgButton, LifeCycles } from '@opentiny/tiny-engine-common'
-import { useLayout, usePage, useCanvas, useModal, useApp, useNotify } from '@opentiny/tiny-engine-meta-register'
+import {
+  useLayout,
+  usePage,
+  useCanvas,
+  useModal,
+  useNotify,
+  getMergeRegistry,
+  getMetaApi,
+  META_SERVICE
+} from '@opentiny/tiny-engine-meta-register'
 import { extend, isEqual } from '@opentiny/vue-renderless/common/object'
 import { constants } from '@opentiny/tiny-engine-utils'
 import { isVsCodeEnv } from '@opentiny/tiny-engine-common/js/environments'
 import { handlePageUpdate } from '@opentiny/tiny-engine-common/js/http'
 import { generatePage } from '@opentiny/tiny-engine-common/js/vscodeGenerateFile'
-import PageGeneral from './PageGeneral.vue'
 import PageHistory from './PageHistory.vue'
 import PageInputOutput from './PageInputOutput.vue'
+import meta from '../meta'
 import http from './http.js'
 
 const { COMPONENT_NAME } = constants
@@ -95,7 +106,6 @@ export default {
     TinyCollapseItem: CollapseItem,
     PageInputOutput,
     LifeCycles,
-    PageGeneral,
     PageHistory,
     PluginSetting,
     SvgButton,
@@ -110,7 +120,6 @@ export default {
   emits: ['openNewPage'],
   setup(props, { emit }) {
     const { requestCreatePage, requestDeletePage } = http
-    const { appInfoState } = useApp()
     const {
       DEFAULT_PAGE,
       pageSettingState,
@@ -122,6 +131,9 @@ export default {
     } = usePage()
     const { pageState, initData } = useCanvas()
     const { confirm } = useModal()
+    const registry = getMergeRegistry(meta.type, meta.id)
+    const pageGeneral = registry.components.PageGeneral
+    const beforeCreatePage = registry?.options?.beforeCreatePage
     const pageGeneralRef = ref(null)
 
     const state = reactive({
@@ -148,7 +160,7 @@ export default {
       }
     }
 
-    const createPage = () => {
+    const createPage = async () => {
       const { page_content, ...other } = DEFAULT_PAGE
       const { page_content: page_content_state, ...pageSettingStateOther } = pageSettingState.currentPageData
       const createParams = {
@@ -159,13 +171,16 @@ export default {
           ...page_content_state,
           fileName: pageSettingState.currentPageData.name
         },
-        app: appInfoState.selectedId,
+        app: getMetaApi(META_SERVICE.GlobalService).getBaseInfo().id,
         isPage: true
       }
 
       if (createParams.id) {
         delete createParams.id
         delete createParams._id
+      }
+      if (beforeCreatePage) {
+        await beforeCreatePage(createParams)
       }
 
       requestCreatePage(createParams)
@@ -363,6 +378,7 @@ export default {
       savePageSetting,
       copyPage,
       pageSettingState,
+      pageGeneral,
       pageGeneralRef,
       deletePage,
       cancelPageSetting,
@@ -390,14 +406,32 @@ export default {
 
 .page-plugin-setting {
   :deep(.plugin-setting-header) {
+    border: 0;
+    .button-group {
+      column-gap: 2px;
+      .tiny-button {
+        width: 40px;
+        padding: 0;
+        min-width: 40px;
+        margin-right: 2px;
+      }
+    }
     .close-plugin-setting-icon {
-      margin-left: 16px;
+      margin-left: 4px;
     }
   }
 
   :deep(.plugin-setting-content) {
-    padding: 16px 0;
+    padding: 0 0 16px 0;
   }
+
+  :deep(.tiny-collapse) {
+    border-bottom: 0;
+  }
+}
+
+.life-cycles-container {
+  padding: 0 0 12px 0;
 }
 
 .page-setting-collapse {
@@ -412,15 +446,6 @@ export default {
     .svg-icon {
       margin-right: 6px;
     }
-  }
-  .base-setting {
-    margin-top: -22px;
-  }
-  .input-output {
-    margin-top: -28px;
-  }
-  .history-source {
-    margin-top: 7px;
   }
 }
 </style>

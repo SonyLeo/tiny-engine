@@ -12,7 +12,6 @@
 
 import ConfigGroup from './ConfigGroup.vue'
 import ConfigItem from './ConfigItem.vue'
-import SaveNewBlock from './SaveNewBlock.vue'
 export { default as PluginSetting } from './PluginSetting.vue'
 export { default as PluginPanel } from './PluginPanel.vue'
 export { default as SvgButton } from './SvgButton.vue'
@@ -27,6 +26,7 @@ export { default as MetaListItem } from './MetaListItem.vue'
 export { default as MetaModal, useModal } from './MetaModal.vue'
 export { default as MetaModalItem } from './MetaModalItem.vue'
 export { default as MetaPopover } from './MetaPopover.vue'
+export { default as MetaCodeEditor } from './MetaCodeEditor.vue'
 export { default as VideoGuide } from './VideoGuide.vue'
 export { default as MonacoEditor } from './MonacoEditor.vue'
 export { default as BlockHistoryList } from './BlockHistoryList.vue'
@@ -51,14 +51,16 @@ export { default as MetaList } from './MetaList.vue'
 export { default as MetaChildItem } from './MetaChildItem.vue'
 export { default as SplitPanes } from './SplitPanes.vue'
 export { default as Pane } from './Pane.vue'
+export { default as I18nInput } from './I18nInput.vue'
+export { default as CanvasDragItem } from './CanvasDragItem.vue'
+export { default as ToolbarBase } from './ToolbarBase.vue'
 export { default as Modal } from './Modal.jsx'
 export { default as Notify } from './Notify.jsx'
-export { ConfigGroup, ConfigItem, SaveNewBlock }
+export { ConfigGroup, ConfigItem }
 
 export const injectGlobalComponents = {
   install: (app) => {
     const globalComponents = {
-      SaveNewBlock,
       ConfigGroup,
       ConfigItem
     }

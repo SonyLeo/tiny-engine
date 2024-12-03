@@ -1,20 +1,25 @@
 <template>
   <tiny-dialog-box
-    v-show="dialogVisible"
+    :visible="dialogVisible"
     title="事件绑定"
     width="50%"
+    dialog-class="bind-event-dialog"
+    draggable
     :append-to-body="true"
     @close="closeDialog"
     @opened="openedDialog"
   >
+    <div class="bind-event-dialog-tip">
+      选择已有方法或者添加新方法（点击 确定 之后将在JS面板中创建一个该名称的新方法）。
+    </div>
     <div class="bind-event-dialog-content">
-      <component :is="BindEventsDialogSidebar" :eventBinding="eventBinding"></component>
+      <component :is="BindEventsDialogSidebar" :dialogVisible="dialogVisible" :eventBinding="eventBinding"></component>
       <component :is="BindEventsDialogContent" :dialogVisible="dialogVisible"></component>
     </div>
     <template #footer>
       <div class="bind-dialog-footer">
-        <tiny-button type="info" @click="confirm">确 定</tiny-button>
         <tiny-button @click="closeDialog">取 消</tiny-button>
+        <tiny-button type="info" @click="confirm">确 定</tiny-button>
       </div>
     </template>
   </tiny-dialog-box>
@@ -22,10 +27,17 @@
 
 <script>
 import { ast2String, string2Ast } from '@opentiny/tiny-engine-common/js/ast'
-import { getMergeMeta, useCanvas, useHistory, useLayout } from '@opentiny/tiny-engine-meta-register'
+import {
+  getMergeMeta,
+  useCanvas,
+  useHistory,
+  useLayout,
+  getOptions,
+  getMetaApi,
+  META_APP
+} from '@opentiny/tiny-engine-meta-register'
 import { Button, DialogBox } from '@opentiny/vue'
 import { nextTick, provide, reactive, ref } from 'vue'
-import { METHOD_TIPS_MAP } from './constants'
 import meta from '../../meta'
 
 const dialogVisible = ref(false)
@@ -53,14 +65,14 @@ export default {
   setup(props) {
     const { BindEventsDialogSidebar, BindEventsDialogContent } = getMergeMeta(meta.id).components
 
-    const { PLUGIN_NAME, getPluginApi, activePlugin } = useLayout()
+    const { PLUGIN_NAME, activePlugin } = useLayout()
     const { pageState } = useCanvas()
-    const { getMethods, saveMethod, highlightMethod } = getPluginApi(PLUGIN_NAME.PageController)
+    const { getMethods, saveMethod, highlightMethod } = getMetaApi(META_APP.Page)
 
     const state = reactive({
       editorContent: '',
       bindMethodInfo: {},
-      tip: METHOD_TIPS_MAP.default,
+      tip: '',
       tipError: false,
       enableExtraParams: false,
       isValidParams: true
@@ -109,7 +121,7 @@ export default {
 
     const resetTipError = () => {
       state.tipError = false
-      state.tip = METHOD_TIPS_MAP.default
+      state.tip = ''
       state.isValidParams = true
     }
 
@@ -150,7 +162,7 @@ export default {
     }
 
     const activePagePlugin = () => {
-      activePlugin(PLUGIN_NAME.PageController).then(() => {
+      activePlugin(PLUGIN_NAME.Page).then(() => {
         // 确认js面板渲染完成之后再对目标函数进行高亮处理
         nextTick(() => {
           if (highlightMethod) {
@@ -160,7 +172,7 @@ export default {
       })
     }
 
-    const confirm = () => {
+    const confirm = async () => {
       if (state.tipError) {
         return
       }
@@ -182,13 +194,20 @@ export default {
 
       // 需要在bindMethod之后
       const functionBody = getFunctionBody()
-
-      saveMethod?.({
-        name: state.bindMethodInfo.name,
+      const { name } = state.bindMethodInfo
+      const method = {
+        name,
         content: state.enableExtraParams
-          ? `function ${state.bindMethodInfo.name}(eventArgs,${formatParams}) ${functionBody}`
-          : `function ${state.bindMethodInfo.name}(${formatParams})  ${functionBody}`
-      })
+          ? `function ${name}(eventArgs,${formatParams}) ${functionBody}`
+          : `function ${name}(${formatParams})  ${functionBody}`
+      }
+      const { beforeSaveMethod } = getOptions(meta.id)
+
+      if (typeof beforeSaveMethod === 'function') {
+        await beforeSaveMethod(method, state.bindMethodInfo)
+      }
+
+      saveMethod?.(method)
 
       activePagePlugin()
       close()
@@ -220,6 +239,20 @@ export default {
 </script>
 
 <style lang="less" scoped>
+.bind-event-dialog {
+  z-index: 99;
+  :deep(.tiny-dialog-box) {
+    min-width: 760px;
+  }
+}
+
+.bind-event-dialog-tip {
+  padding: var(--te-common-vertical-item-spacing-normal) 14px;
+  margin-bottom: var(--te-common-vertical-item-spacing-normal);
+  background-color: var(--te-common-bg-container);
+  color: var(--te-common-text-weaken);
+}
+
 .bind-event-dialog-content {
   display: flex;
   min-width: 700px;

@@ -9,7 +9,23 @@ export default {
   component,
   options: {
     configProvider: TinyConfigProvider,
-    configProviderDesign: designSmbConfig
+    configProviderDesign: designSmbConfig,
+    isShowLine: true,
+    isShowCollapse: true,
+    toolbars: {
+      left: ['engine.toolbars.breadcrumb', 'engine.toolbars.lock', 'engine.toolbars.logo'],
+      center: ['engine.toolbars.media'],
+      right: [
+        ['engine.toolbars.redoundo', 'engine.toolbars.clean'],
+        ['engine.toolbars.preview'],
+        ['engine.toolbars.generate-code', 'engine.toolbars.save']
+      ],
+      collapse: [
+        ['engine.toolbars.collaboration'],
+        ['engine.toolbars.refresh', 'engine.toolbars.fullscreen'],
+        ['engine.toolbars.lang']
+      ]
+    }
   },
   metas: [LayoutService]
 }

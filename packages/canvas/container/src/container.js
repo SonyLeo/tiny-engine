@@ -68,6 +68,10 @@ export const getCurrent = () => {
   }
 }
 
+export const getDesignMode = () => getRenderer()?.getDesignMode()
+
+export const setDesignMode = (mode) => getRenderer()?.setDesignMode(mode)
+
 export const getGlobalState = () => getRenderer().getGlobalState()
 
 export const getNode = (id, parent) => getRenderer()?.getNode(id, parent)
@@ -185,6 +189,8 @@ export const dragEnd = () => {
   if (element && canvasState.type === 'absolute') {
     data.props = data.props || {}
     data.props.style = element.style.cssText
+
+    getController().addHistory()
   }
 
   // 重置拖拽状态
@@ -541,6 +547,8 @@ const setHoverRect = (element, data) => {
   return undefined
 }
 
+let moveUpdateTimer = null
+
 // 绝对布局
 const absoluteMove = (event, element) => {
   const { clientX, clientY } = event
@@ -572,6 +580,19 @@ const absoluteMove = (event, element) => {
       element.style.height = `${clientY - y}px`
     }
   }
+
+  clearTimeout(moveUpdateTimer)
+
+  const { data } = dragState
+  data.props = data.props || {}
+
+  // 防抖更新位置信息到 schema
+  moveUpdateTimer = setTimeout(() => {
+    data.props.style = element.style.cssText
+
+    getController().addHistory()
+  }, 100)
+
   updateRect()
 }
 
@@ -716,11 +737,7 @@ export const onMouseUp = () => {
       if (absolute) {
         targetNode.node = getSchema()
         data.props = data.props || {}
-        data.props.style = {
-          position: 'absolute',
-          top: dragState.mouse.y + 'px',
-          left: dragState.mouse.x + 'px'
-        }
+        data.props.style = `position: absolute; top: ${dragState.mouse.y}px; left: ${dragState.mouse.x}px`
       }
 
       insertNode(targetNode, position)
@@ -880,6 +897,8 @@ export const canvasApi = {
   setProps,
   setGlobalState,
   getGlobalState,
+  getDesignMode,
+  setDesignMode,
   getDocument,
   canvasDispatch,
   Builtin,

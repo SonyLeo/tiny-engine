@@ -2,6 +2,11 @@ export default {
   id: 'engine.toolbars.collaboration',
   type: 'toolbars',
   title: 'collaboration',
-  icon: '',
-  align: 'right'
+  options: {
+    icon: {
+      default: 'team-collaboration'
+    },
+    renderType: 'slot',
+    collapsed: true
+  }
 }

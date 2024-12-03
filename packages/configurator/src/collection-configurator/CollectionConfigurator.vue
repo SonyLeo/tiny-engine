@@ -10,8 +10,7 @@
 </template>
 
 <script lang="jsx">
-import { useApp, useModal } from '@opentiny/tiny-engine-meta-register'
-import { useHttp } from '@opentiny/tiny-engine-http'
+import { useModal, getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
 import { Option, Select, Tooltip } from '@opentiny/vue'
 import { IconConmentRefresh } from '@opentiny/vue-icon'
 import { nextTick, ref } from 'vue'
@@ -29,7 +28,6 @@ export default {
   setup(props, { emit }) {
     const options = ref([])
     const selected = ref(Array.isArray(props.modelValue) ? props.modelValue[0] : props.modelValue)
-    const http = useHttp()
 
     const sourceChange = (value) => {
       if (props.modelValue) {
@@ -47,9 +45,10 @@ export default {
       }
     }
 
-    const fetchDataSourceList = (appId) => http.get(`/app-center/api/sources/list/${appId}`)
+    const fetchDataSourceList = (appId) => getMetaApi(META_SERVICE.Http).get(`/app-center/api/sources/list/${appId}`)
 
-    fetchDataSourceList(useApp().appInfoState.selectedId).then((data) => {
+    const appId = getMetaApi(META_SERVICE.GlobalService).getBaseInfo().id
+    fetchDataSourceList(appId).then((data) => {
       options.value = data
     })
 

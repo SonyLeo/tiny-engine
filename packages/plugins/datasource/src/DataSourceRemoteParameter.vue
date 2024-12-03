@@ -1,5 +1,4 @@
 <template>
-  <div class="title">请求参数(JSON)</div>
   <monaco-editor :value="modelValue" class="monaco-editor" :options="options" @change="change" />
 </template>
 
@@ -44,5 +43,7 @@ export default {
 .monaco-editor {
   height: 180px;
   margin-top: 8px;
+  border: 1px solid var(--ti-lowcode-base-gray-101);
+  border-radius: 4px;
 }
 </style>

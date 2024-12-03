@@ -11,10 +11,18 @@
  */
 
 import { reactive } from 'vue'
-import { useHttp } from '@opentiny/tiny-engine-http'
 import { utils, constants } from '@opentiny/tiny-engine-utils'
 import { meta as BuiltinComponentMaterials } from '@opentiny/tiny-engine-builtin-component'
-import { getMergeMeta, useNotify, useCanvas, useBlock } from '@opentiny/tiny-engine-meta-register'
+import {
+  getMergeMeta,
+  getOptions,
+  useNotify,
+  useCanvas,
+  useBlock,
+  getMetaApi,
+  META_SERVICE
+} from '@opentiny/tiny-engine-meta-register'
+import meta from '../../meta'
 
 const { camelize, capitalize } = utils
 const { MATERIAL_TYPE } = constants
@@ -24,8 +32,6 @@ const resource = new Map()
 
 // 这里涉及到区块发布后的更新问题，所以需要单独缓存区块
 const blockResource = new Map()
-
-const http = useHttp()
 
 const materialState = reactive({
   components: [], // 这里存放的是物料插件面板里所有显示的组件
@@ -77,10 +83,48 @@ const getConfigureMap = () => {
 }
 
 /**
+ * 附加基础属性，基础属性可以通过注册表配置
+ * @param {any[]} schemaProperties
+ * @returns
+ */
+const patchBaseProps = (schemaProperties) => {
+  if (!Array.isArray(schemaProperties)) {
+    return
+  }
+
+  const { properties = [], insertPosition = 'end' } = getOptions(meta.id).basePropertyOptions || {}
+
+  for (const basePropGroup of properties) {
+    const group = schemaProperties.find((item) => {
+      // 如果存在了包含'其他'字符串的分组，统一为'其他'分组
+      if (item.label.zh_CN.includes('其他')) {
+        item.label.zh_CN = '其他'
+      }
+
+      return (
+        (basePropGroup.group && basePropGroup.group === item.group) || basePropGroup.label.zh_CN === item.label.zh_CN
+      )
+    })
+
+    if (group) {
+      if (insertPosition === 'start') {
+        group.content.splice(0, 0, ...basePropGroup.content)
+      } else {
+        group.content.push(...basePropGroup.content)
+      }
+    } else {
+      schemaProperties.push(basePropGroup)
+    }
+  }
+}
+
+/**
  * 将component里的内容注册到resource变量中
  * @param {*} data
  */
 const registerComponentToResource = (data) => {
+  patchBaseProps(data.schema?.properties)
+
   if (Array.isArray(data.component)) {
     const { component, ...others } = data
     component.forEach((item) => {
@@ -94,7 +138,7 @@ const registerComponentToResource = (data) => {
 const fetchBlockDetail = async (blockName) => {
   const { getBlockAssetsByVersion } = useBlock()
   const currentVersion = componentState.componentsMap?.[blockName]?.version
-  const block = (await http.get(`/material-center/api/block?label=${blockName}`))?.[0]
+  const block = (await getMetaApi(META_SERVICE.Http).get(`/material-center/api/block?label=${blockName}`))?.[0]
 
   if (!block) {
     throw new Error(`区块${blockName}不存在！`)
@@ -209,15 +253,51 @@ const setThirdPartyDeps = (components) => {
 }
 
 /**
- * 获取到符合物料协议的bundle.json之后，对其进行处理的函数
- * @param {*} materials
+ * 添加组件snippets(分组相同则合并)
+ * @param {*} componentsSnippets 待添加的组件snippets
+ * @param {*} snippetsData 当前snippets
+ * @returns {*} snippetsData 合并后的snippets
  */
-const addMaterials = (materials = {}) => {
-  setThirdPartyDeps(materials.components)
-  materialState.components.push(...materials.snippets)
-  materials.components.forEach(registerComponentToResource)
+const addComponentSnippets = (componentSnippets, snippetsData) => {
+  if (!componentSnippets) return
 
-  const promises = materials?.blocks?.map((item) => registerBlock(item, true))
+  const snippetsMap = new Map()
+  snippetsData.forEach((snippetGroup) => snippetsMap.set(snippetGroup.group, snippetGroup))
+  componentSnippets.forEach((snippetGroup) => {
+    if (snippetsMap.has(snippetGroup.group)) {
+      snippetsMap.get(snippetGroup.group).children.push(...snippetGroup.children)
+    } else {
+      snippetsData.push(snippetGroup)
+    }
+  })
+
+  return snippetsData
+}
+
+/**
+ * 添加物料Bundle文件中的组件类型物料
+ * @param {*} materialBundle 物料包Bundle.json文件对象
+ * @returns null
+ */
+const addComponents = (materialBundle) => {
+  const { snippets, components } = materialBundle
+  // 解析组件三方依赖
+  setThirdPartyDeps(components)
+  // 注册组件到map中
+  components.forEach(registerComponentToResource)
+  // 添加组件snippets
+  addComponentSnippets(snippets, materialState.components)
+}
+
+/**
+ * 添加物料Bundle文件中的区块类型物料
+ * @param {*} blocks 物料包Bundle.json文件中blocks对象
+ */
+const addBlocks = (blocks) => {
+  if (!Array.isArray(blocks) || !blocks.length) {
+    return
+  }
+  const promises = blocks?.map((item) => registerBlock(item, true))
 
   Promise.allSettled(promises).then((blocks) => {
     if (!blocks?.length) {
@@ -235,6 +315,15 @@ const addMaterials = (materials = {}) => {
       ...blocks.filter((res) => res.status === 'fulfilled').map((res) => res.value)
     )
   })
+}
+
+/**
+ * 获取到符合物料协议的bundle.json之后，处理组件与区块物料
+ * @param {*} materials
+ */
+const addMaterials = (materials = {}) => {
+  addComponents(materials)
+  addBlocks(materials.blocks)
 }
 
 const getMaterial = (name) => {
@@ -262,7 +351,7 @@ const setMaterial = (name, data) => {
  */
 export const getMaterialsRes = async () => {
   const bundleUrls = getMergeMeta('engine.config')?.material || []
-  const materials = await Promise.allSettled(bundleUrls.map((url) => http.get(url)))
+  const materials = await Promise.allSettled(bundleUrls.map((url) => getMetaApi(META_SERVICE.Http).get(url)))
   return materials
 }
 
@@ -316,15 +405,10 @@ const updateCanvasDependencies = (blocks) => {
 
 const initBuiltinMaterial = () => {
   const { Builtin } = useCanvas().canvasApi.value
-  Builtin.data.materials.components[0].children.forEach(registerComponentToResource)
-  BuiltinComponentMaterials.components[0].children.forEach(registerComponentToResource)
-
-  const builtinSnippets = {
-    group: '内置组件',
-    children: [...Builtin.data.materials.snippets[0].children, ...BuiltinComponentMaterials.snippets[0].children]
-  }
-
-  materialState.components.push(builtinSnippets)
+  // 添加画布物料
+  addMaterials(Builtin.data.materials)
+  // 添加builtin-component NPM包物料
+  addMaterials(BuiltinComponentMaterials)
 }
 
 const initMaterial = ({ isInit = true, appData = {} } = {}) => {
@@ -351,6 +435,7 @@ export default function () {
     clearBlockResources, // 清空区块缓存，以便更新最新版区块
     getMaterial, // 获取单个物料，(property) getMaterial: (name: string) => Material
     setMaterial, // 设置单个物料 (property) setMaterial: (name: string, data: Material) => void
+    addMaterials, // 添加多个物料
     registerBlock, // 注册新的区块
     updateCanvasDependencies, //传入新的区块，获取新增区块的依赖，更新画布中的组件依赖
     getConfigureMap // 获取物料组件的配置信息

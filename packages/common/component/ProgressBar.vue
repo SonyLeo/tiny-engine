@@ -14,16 +14,15 @@
 <script>
 import { computed } from 'vue'
 import { Progress as TinyProgress } from '@opentiny/vue'
-import { useLayout } from '@opentiny/tiny-engine-meta-register'
+import { getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
 
 export default {
   components: {
     TinyProgress
   },
   setup() {
-    const { PLUGIN_NAME, getPluginApi } = useLayout()
-    const { getEditBlock } = getPluginApi(PLUGIN_NAME.BlockManage)
-    const editBlock = computed(getEditBlock)
+    const { getEditBlock } = getMetaApi(META_APP.BlockManage) || {}
+    const editBlock = getEditBlock ? computed(getEditBlock) : null
 
     return {
       editBlock

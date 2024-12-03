@@ -107,9 +107,7 @@
 
     <template #footer>
       <div class="bind-dialog-footer">
-        <div class="left">
-          <tiny-button type="danger" plain @click="remove">移除绑定</tiny-button>
-        </div>
+        <tiny-button type="danger" plain @click="remove">移除绑定</tiny-button>
         <div class="right">
           <tiny-button @click="cancel">取 消</tiny-button>
           <tiny-button type="info" @click="confirm">确 定</tiny-button>
@@ -121,11 +119,17 @@
 
 <script>
 import { VueMonaco as MonacoEditor, SvgButton } from '@opentiny/tiny-engine-common'
-import { useApp, useCanvas, useLayout, useProperties, useResource } from '@opentiny/tiny-engine-meta-register'
+import {
+  useCanvas,
+  useProperties,
+  useResource,
+  getMetaApi,
+  META_APP,
+  META_SERVICE
+} from '@opentiny/tiny-engine-meta-register'
 import { getCommentByKey } from '@opentiny/tiny-engine-common/js/comment'
 import { formatString, generate, parse, traverse } from '@opentiny/tiny-engine-common/js/ast'
 import { DEFAULT_LOOP_NAME } from '@opentiny/tiny-engine-common/js/constants'
-import { useHttp } from '@opentiny/tiny-engine-http'
 import { constants } from '@opentiny/tiny-engine-utils'
 import { Alert, Button, DialogBox, Input, Search, Switch, Tooltip } from '@opentiny/vue'
 import { camelize, capitalize } from '@vue/shared'
@@ -193,7 +197,6 @@ export default {
   },
   setup(props, { emit }) {
     const editor = ref(null)
-    const http = useHttp()
     let oldValue = ''
 
     const list = [
@@ -460,8 +463,7 @@ export default {
 
       if (item.id === 'function') {
         state.bindPrefix = CONSTANTS.THIS
-        const { PLUGIN_NAME, getPluginApi } = useLayout()
-        const { getMethods } = getPluginApi(PLUGIN_NAME.PageController)
+        const { getMethods } = getMetaApi(META_APP.Page)
         state.variables = { ...getMethods?.() }
       } else if (item.id === 'bridge' || item.id === 'utils') {
         state.bindPrefix = `${CONSTANTS.THIS}${item.id}.`
@@ -483,18 +485,20 @@ export default {
         state.variables = bindProperties
       } else if (item.id === 'datasource') {
         state.bindPrefix = CONSTANTS.DATASOUCEPREFIX
-        const { appInfoState } = useApp()
         const url = new URLSearchParams(location.search)
-        const selectedId = appInfoState.selectedId || url.get('id')
+        const appId = getMetaApi(META_SERVICE.GlobalService).getBaseInfo().id
+        const selectedId = appId || url.get('id')
 
         // 实时请求数据源列表数据，保证数据源获取最新的数据源数据
-        http.get(`/app-center/api/sources/list/${selectedId}`).then((data) => {
-          const sourceData = {}
-          data.forEach((res) => {
-            sourceData[res.name] = res
+        getMetaApi(META_SERVICE.Http)
+          .get(`/app-center/api/sources/list/${selectedId}`)
+          .then((data) => {
+            const sourceData = {}
+            data.forEach((res) => {
+              sourceData[res.name] = res
+            })
+            state.variables = sourceData
           })
-          state.variables = sourceData
-        })
       } else if (item.id === 'store') {
         state.bindPrefix = CONSTANTS.STORE
         state.variables = {}

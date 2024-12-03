@@ -27,7 +27,3 @@ pnpm-debug.log*
 *.sw?
 tmp
 temp
-
-# docs
-docs/.vitepress/dist
-docs/.vitepress/cache

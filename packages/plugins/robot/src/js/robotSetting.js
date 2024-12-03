@@ -11,8 +11,7 @@
  */
 
 import { reactive } from 'vue'
-import { useApp } from '@opentiny/tiny-engine-meta-register'
-import { useHttp } from '@opentiny/tiny-engine-http'
+import { getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
 
 export const AIModelOptions = [
   { label: 'ChatGPT：gpt-3.5-turbo', value: 'gpt-3.5-turbo', manufacturer: 'openai' },
@@ -59,9 +58,9 @@ export const initBlockList = async () => {
   if (state.blockList?.length) {
     return
   }
-  const appId = useApp().appInfoState.selectedId
+  const appId = getMetaApi(META_SERVICE.GlobalService).getBaseInfo().id
   try {
-    const list = await useHttp().get('/material-center/api/blocks', { params: { appId } })
+    const list = await getMetaApi(META_SERVICE.Http).get('/material-center/api/blocks', { params: { appId } })
     setBlocks(list)
     setBlockContent(list)
   } catch (err) {

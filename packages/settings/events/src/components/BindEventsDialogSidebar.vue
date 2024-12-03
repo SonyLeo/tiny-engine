@@ -18,7 +18,7 @@
 </template>
 
 <script>
-import { useLayout } from '@opentiny/tiny-engine-meta-register'
+import { getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
 import { Search } from '@opentiny/vue'
 import { iconYes } from '@opentiny/vue-icon'
 import { inject, ref, watchEffect } from 'vue'
@@ -36,8 +36,7 @@ export default {
     }
   },
   setup(props) {
-    const { PLUGIN_NAME, getPluginApi } = useLayout()
-    const { getMethodNameList } = getPluginApi(PLUGIN_NAME.PageController)
+    const { getMethodNameList } = getMetaApi(META_APP.Page)
 
     const searchValue = ref('')
     const filteredMethodList = ref([])
@@ -107,14 +106,14 @@ export default {
   flex-direction: column;
 
   .left-title {
-    font-weight: 600;
+    font-weight: 400;
   }
 
   .left-list-wrap {
     border: 1px solid var(--ti-lowcode-bind-event-dialog-content-left-border-color);
     border-radius: 4px;
     height: 300px;
-    margin-top: 12px;
+    margin-top: var(--te-common-vertical-item-spacing-normal);
     display: flex;
     flex: 1;
 
@@ -132,7 +131,7 @@ export default {
         justify-content: space-between;
         padding: 8px 12px;
         cursor: pointer;
-
+        color: var(--ti-lowcode-bind-event-dialog-color);
         &.active {
           background: var(--ti-lowcode-bind-event-dialog-content-left-list-item-active-bg-color);
         }

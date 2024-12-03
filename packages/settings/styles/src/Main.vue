@@ -27,7 +27,7 @@
     </div>
   </div>
   <class-names-container></class-names-container>
-  <tiny-collapse v-model="activeNames">
+  <tiny-collapse v-model="activeNames" @change="handoverGroup">
     <tiny-collapse-item title="布局" name="layout">
       <layout-group :display="state.style.display" @update="updateStyle" />
       <flex-box v-if="state.style.display === 'flex'" :style="state.style" @update="updateStyle"></flex-box>
@@ -65,11 +65,10 @@
 </template>
 
 <script>
-import { ref, watch } from 'vue'
+import { computed, watch } from 'vue'
 import { Collapse, CollapseItem, Input } from '@opentiny/vue'
 import { useHistory, useCanvas, useProperties } from '@opentiny/tiny-engine-meta-register'
 import { CodeConfigurator, VariableConfigurator } from '@opentiny/tiny-engine-configurator'
-import { formatString } from '@opentiny/tiny-engine-common/js/ast'
 import {
   SizeGroup,
   LayoutGroup,
@@ -106,8 +105,14 @@ export default {
     TinyInput: Input,
     VariableConfigurator
   },
-  setup() {
-    const activeNames = ref([
+  props: {
+    isCollapsed: {
+      type: Boolean,
+      default: false
+    }
+  },
+  setup(props) {
+    const styleCategoryGroup = [
       'layout',
       'spacing',
       'size',
@@ -116,19 +121,26 @@ export default {
       'backgrounds',
       'borders',
       'effects'
-    ])
+    ]
+    const activeNames = computed(() => (props.isCollapsed ? [styleCategoryGroup[0]] : styleCategoryGroup))
     const { getCurrentSchema } = useCanvas()
     // 获取当前节点 style 对象
     const { state, updateStyle } = useStyle() // updateStyle
     const { addHistory } = useHistory()
     const { getSchema } = useProperties()
 
+    const handoverGroup = (actives) => {
+      if (props.isCollapsed) {
+        activeNames.value = actives.length > 1 ? actives.shift() : actives
+      }
+    }
+
     // 保存编辑器内容，并回写到 schema
     const save = ({ content }) => {
       const { getSchema: getCanvasPageSchema, updateRect } = useCanvas().canvasApi.value
       const pageSchema = getCanvasPageSchema()
       const schema = getSchema() || pageSchema
-      const styleString = formatString(styleStrRemoveRoot(content), 'css')
+      const styleString = styleStrRemoveRoot(content)
       const currentSchema = getCurrentSchema() || pageSchema
 
       state.styleContent = content
@@ -193,6 +205,7 @@ export default {
       activeNames,
       CSS_TYPE,
       open,
+      handoverGroup,
       save,
       close,
       updateStyle,
@@ -205,16 +218,17 @@ export default {
 <style lang="less" scoped>
 .style-editor {
   justify-content: space-around;
-  padding: 8px 16px 0;
+  padding: 12px 0 0;
   column-gap: 8px;
   .line-style {
+    padding: 0 8px 0 12px;
     display: block;
     color: var(--ti-lowcode-setting-style-font-color);
     font-size: 12px;
     .line-text {
       display: block;
       margin-bottom: 8px;
-      font-size: 14px;
+      font-size: 12px;
       color: var(--ti-lowcode-setting-style-title-color);
     }
   }
@@ -245,5 +259,13 @@ export default {
       }
     }
   }
+}
+
+.dots {
+  display: inline-block;
+  margin-left: 4px;
+  vertical-align: middle;
+  border: 2px solid var(--te-common-border-checked);
+  border-radius: 2px;
 }
 </style>

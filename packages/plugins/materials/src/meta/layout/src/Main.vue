@@ -1,7 +1,11 @@
 <template>
   <plugin-panel :title="shortcut ? '' : title" @close="$emit('close')">
     <template #header>
-      <component :is="headerComponent" :fixedPanels="fixedPanels"></component>
+      <component
+        :is="headerComponent"
+        :fixedPanels="fixedPanels"
+        @fix-panel="(id) => $emit('fix-panel', id)"
+      ></component>
     </template>
     <template #content>
       <tiny-tabs v-model="activeName" tab-style="button-card" class="full-width-tabs" v-if="!onlyShowDefault">
@@ -51,7 +55,7 @@ export default {
     const pluginRegistryData = ref(props.registryData)
     const rightPanelRef = ref(null)
     const displayComponentIds = pluginRegistryData.value.options.displayComponentIds || []
-    const headerComponent = getMergeMeta(pluginRegistryData.value.components?.header)
+    const headerComponent = pluginRegistryData.value.components?.header
     const onlyShowDefault = ref(displayComponentIds.length === 1)
     const activeTabId =
       displayComponentIds.find((item) => item === pluginRegistryData.value.options?.defaultTabId) ||
@@ -92,13 +96,13 @@ export default {
 }
 
 :deep(.tiny-tabs__header) {
-  padding: 8px;
+  padding: 0 12px;
 }
 
 :deep(.tiny-tabs__content) {
   flex: 1;
-  overflow-y: scroll;
   padding: 0;
+  margin: 0px;
   & > div {
     height: 100%;
   }

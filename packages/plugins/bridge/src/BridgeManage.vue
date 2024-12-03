@@ -1,12 +1,7 @@
 <template>
   <div class="manage-panel">
     <div class="manage-panel-search">
-      <tiny-search
-        v-model="state.searchValue"
-        clearable
-        placeholder="请输入关键字搜索"
-        @update:modelValue="searchBridgeData"
-      >
+      <tiny-search v-model="state.searchValue" clearable placeholder="搜索" @update:modelValue="searchBridgeData">
         <template #prefix>
           <tiny-icon-search />
         </template>
@@ -19,7 +14,7 @@
         :class="['list-item', index === state.activeIndex ? 'active' : '']"
         @click.stop="openEdit(item, index)"
       >
-        <svg-icon name="resources"></svg-icon>
+        <svg-icon name="plugin-icon-sresources"></svg-icon>
         <div class="item-label">{{ item.name }}</div>
         <svg-icon class="setting-icon" name="setting" @click.stop="openEdit(item, index)"></svg-icon>
       </div>
@@ -133,7 +128,7 @@ export default {
   position: relative;
 
   .manage-panel-search {
-    padding: 8px;
+    padding: 0 12px 12px 12px;
   }
 
   .add-button {
@@ -145,10 +140,12 @@ export default {
     flex: 1;
     border-top: 1px solid var(--ti-lowcode-tabs-border-color);
     overflow: auto;
+    padding: 12px 0;
   }
 
   .list-item {
-    height: 28px;
+    height: 24px;
+    line-height: 24px;
     display: grid;
     grid-template-columns: 16px 1fr auto;
     column-gap: 8px;
@@ -162,8 +159,13 @@ export default {
     &:hover,
     &.active {
       background: var(--ti-lowcode-bridge-list-bg);
+      .setting-icon {
+        display: block;
+      }
     }
-    svg {
+
+    .setting-icon {
+      display: none;
       color: var(--ti-lowcode-toolbar-more-hover-color);
     }
   }

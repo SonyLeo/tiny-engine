@@ -2,6 +2,11 @@ export default {
   id: 'engine.toolbars.refresh',
   type: 'toolbars',
   title: 'refresh',
-  icon: '',
-  align: 'right'
+  options: {
+    icon: {
+      default: 'refresh'
+    },
+    renderType: 'icon',
+    collapsed: true
+  }
 }

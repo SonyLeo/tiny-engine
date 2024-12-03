@@ -2,6 +2,11 @@ export default {
   id: 'engine.toolbars.lang',
   type: 'toolbars',
   title: 'lang',
-  align: 'right',
-  icon: ''
+  options: {
+    icon: {
+      default: 'cn-en'
+    },
+    renderType: 'icon',
+    collapsed: true
+  }
 }

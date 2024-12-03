@@ -1,11 +1,16 @@
 <template>
   <div id="tiny-right-panel">
-    <tiny-tabs v-model="layoutState.settings.render" tab-style="button-card">
+    <tiny-tabs v-model="layoutState.settings.render">
       <tiny-tab-item v-for="(setting, index) in settings" :key="index" :title="setting.title" :name="setting.name">
-        <component :is="setting.entry"></component>
+        <component :is="setting.entry" :is-collapsed="isCollapsed"></component>
         <div v-show="activating" class="active"></div>
       </tiny-tab-item>
     </tiny-tabs>
+    <div v-if="layoutState.settings.render === 'style'" class="tabs-setting">
+      <tiny-tooltip effect="dark" :content="isCollapsed ? '展开' : '折叠'" placement="top" :visible-arrow="false">
+        <template #default> <svg-icon :name="settingIcon" @click="isCollapsed = !isCollapsed"></svg-icon> </template>
+      </tiny-tooltip>
+    </div>
   </div>
 </template>
 
@@ -29,10 +34,14 @@ export default {
     const { layoutState } = useLayout()
     const activating = computed(() => layoutState.settings.activating)
     const showMask = ref(true)
+    const isCollapsed = ref(false)
+    const settingIcon = computed(() => (isCollapsed.value ? 'style-panel-collapsed' : 'style-panel-expand'))
 
     return {
       showMask,
+      isCollapsed,
       activating,
+      settingIcon,
       layoutState
     }
   }
@@ -46,46 +55,67 @@ export default {
   transition: 0.3s linear;
   position: relative;
   border-left: 1px solid var(--ti-lowcode-plugin-setting-panel-border-left-color);
-  padding-top: 20px;
+  padding-top: 12px;
   background-color: var(--ti-lowcode-setting-panel-bg-color);
 
+  .tabs-setting {
+    position: absolute;
+    top: 9px;
+    right: 18px;
+    line-height: 26px;
+    color: var(--te-common-icon-secondary);
+    cursor: pointer;
+  }
   .tiny-tabs {
     height: 100%;
   }
   :deep(.tiny-tabs) {
     display: flex;
     flex-direction: column;
-    // 居中显示
+    .tiny-tabs__header .tiny-tabs__nav {
+      width: 60%;
+    }
     .tiny-tabs__nav-scroll {
-      text-align: center;
-      .tiny-tabs__nav {
-        display: inline-flex;
-        justify-content: center;
-        float: none;
+      margin-left: 12px;
+      .tiny-tabs__active-bar {
+        height: 3px;
+        background-color: var(--ti-lowcode-setting-panel-tabs-item-title-active-color);
       }
     }
-    .tiny-tabs__header {
-      padding-bottom: 12px;
-    }
+
     .tiny-tabs__content {
       flex: 1;
-      overflow-y: scroll;
+      overflow-y: auto;
       padding: 0;
-      margin-top: 0;
+      margin: 0;
+    }
+    .tiny-tabs__nav.is-show-active-bar .tiny-tabs__item {
+      margin-right: 8px;
     }
     .tiny-tabs__item {
+      flex: 1;
+      background-color: var(--ti-lowcode-setting-panel-bg-color);
       color: var(--ti-lowcode-setting-panel-tabs-item-title-color);
+      margin-right: 5px;
       &:hover {
         color: var(--ti-lowcode-setting-panel-tabs-item-title-hover-color);
       }
       &.is-active {
         color: var(--ti-lowcode-setting-panel-tabs-item-title-active-color);
       }
+
+      .tiny-tabs__item__title {
+        padding-bottom: 2px;
+      }
+    }
+
+    .tiny-tabs__nav-wrap-not-separator::after {
+      z-index: 2;
     }
   }
 
   :deep(.tiny-collapse-item__content) {
-    padding: 8px 16px;
+    padding: 0 8px 12px 12px; // 这里的bottom为4px + 内部行元素与底部的距离为8px = 12px
   }
 }
 

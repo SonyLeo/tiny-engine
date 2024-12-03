@@ -1,13 +1,39 @@
 <template>
   <div class="tiny-engine-toolbar">
     <div class="toolbar-left">
-      <component :is="item.entry" v-for="item in leftBar" :key="item.id"></component>
+      <component
+        :is="getMergeMeta(comp).entry"
+        v-for="comp in state.leftBar"
+        :key="comp"
+        :options="getMergeMeta(comp).options"
+      ></component>
     </div>
     <div class="toolbar-center">
-      <component :is="item.entry" v-for="item in centerBar" :key="item.id"></component>
+      <component
+        :is="getMergeMeta(comp).entry"
+        v-for="comp in state.centerBar"
+        :key="comp"
+        :options="getMergeMeta(comp).options"
+      ></component>
     </div>
     <div class="toolbar-right">
-      <component :is="item.entry" v-for="item in rightBar" :key="item.id"></component>
+      <div class="toolbar-right-content">
+        <div class="toolbar-right-item" v-for="(item, idx) in state.rightBar" :key="idx">
+          <div v-if="typeof item === 'string'">
+            <component :is="getMergeMeta(item)?.entry" :options="getMergeMeta(item)?.options"></component>
+          </div>
+          <div class="toolbar-right-item-arr" v-if="Array.isArray(item)">
+            <div class="toolbar-right-item-comp" v-for="comp in item" :key="comp">
+              <component :is="getMergeMeta(comp)?.entry" :options="getMergeMeta(comp)?.options"></component>
+            </div>
+            <span class="toolbar-right-line" v-if="layoutRegistry.options?.isShowLine">|</span>
+          </div>
+        </div>
+      </div>
+      <toolbar-collapse
+        :collapseBar="state.collapseBar"
+        v-if="layoutRegistry.options?.isShowCollapse"
+      ></toolbar-collapse>
     </div>
   </div>
   <div class="progress">
@@ -17,50 +43,36 @@
 
 <script>
 import { reactive, nextTick } from 'vue'
-import { useLayout } from '@opentiny/tiny-engine-meta-register'
+import { getMergeMeta } from '@opentiny/tiny-engine-meta-register'
 import { ProgressBar } from '@opentiny/tiny-engine-common'
+import ToolbarCollapse from './ToolbarCollapse.vue'
 
 export default {
   components: {
-    ProgressBar
+    ProgressBar,
+    ToolbarCollapse
   },
   props: {
-    toolbars: {
-      type: Array,
-      default: () => []
+    layoutRegistry: {
+      type: Object,
+      default: () => {}
     }
   },
   setup(props) {
-    const leftBar = []
-    const rightBar = []
-    const centerBar = []
     const state = reactive({
-      showDeployBlock: false
+      showDeployBlock: false,
+      leftBar: props.layoutRegistry?.options?.toolbars?.left,
+      rightBar: props.layoutRegistry?.options?.toolbars?.right,
+      centerBar: props.layoutRegistry?.options?.toolbars?.center,
+      collapseBar: props.layoutRegistry?.options?.toolbars?.collapse
     })
 
-    props.toolbars.forEach((item) => {
-      if (item.align === 'right') {
-        rightBar.push(item)
-      } else if (item.align === 'center') {
-        centerBar.push(item)
-      } else {
-        leftBar.push(item)
-      }
-      if (item.id === 'lock') {
-        useLayout().registerPluginApi({ Lock: item.api })
-      }
-      if (item.id === 'save') {
-        useLayout().registerPluginApi({ save: item.api })
-      }
-    })
     nextTick(() => {
       state.showDeployBlock = true
     })
 
     return {
-      leftBar,
-      rightBar,
-      centerBar,
+      getMergeMeta,
       state
     }
   }
@@ -90,29 +102,47 @@ export default {
     justify-content: space-between;
     align-items: center;
   }
-  .toolbar-left {
-    margin: 0 1px;
-  }
 
+  .toolbar-left,
+  .toolbar-center,
   .toolbar-right {
-    margin: 0 6px;
-    margin-right: 24px;
-    column-gap: 6px;
-    align-items: center;
     :deep(.icon) {
       display: inline-flex;
       justify-content: center;
       align-items: center;
       vertical-align: middle;
-      width: 32px;
-      height: 32px;
-      border-radius: 6px;
+      width: 26px;
+      height: 26px;
+      border-radius: 4px;
       position: relative;
+      margin-right: 4px;
       svg {
         cursor: pointer;
         font-size: 20px;
         color: var(--ti-lowcode-toolbar-title-color);
       }
+    }
+  }
+
+  .toolbar-left {
+    margin: 0 1px;
+    :deep(.icon) {
+      background: var(--ti-lowcode-toolbar-view-active-bg);
+      svg {
+        font-size: 16px;
+      }
+      &:not(.disabled):hover {
+        background: var(--ti-lowcode-toolbar-left-icon-bg-hover);
+      }
+    }
+  }
+
+  .toolbar-right {
+    margin: 0 6px;
+    margin-right: 12px;
+    align-items: center;
+    :deep(.icon) {
+      margin-right: 0;
       &:not(.disabled):hover {
         background: var(--ti-lowcode-toolbar-view-active-bg);
       }
@@ -122,6 +152,26 @@ export default {
       &.disabled {
         cursor: not-allowed;
       }
+    }
+    .toolbar-right-main {
+      display: flex;
+    }
+    .toolbar-right-content {
+      display: flex;
+      .toolbar-right-item-arr,
+      .toolbar-right-item {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .toolbar-right-item {
+        margin: 0 2px;
+      }
+    }
+
+    .toolbar-right-line {
+      color: var(--ti-lowcode-toolbar-right-line);
+      margin: 0 6px;
     }
     .tiny-locales {
       height: 35px;
@@ -141,6 +191,11 @@ export default {
         }
       }
     }
+  }
+}
+.toolbar-right-content .toolbar-right-item:last-child {
+  .toolbar-right-line {
+    display: none;
   }
 }
 

@@ -11,18 +11,19 @@
  */
 
 import { reactive } from 'vue'
-import { useHttp } from '@opentiny/tiny-engine-http'
 import { constants } from '@opentiny/tiny-engine-utils'
 import { getCanvasStatus } from '@opentiny/tiny-engine-common/js/canvas'
 import {
-  useApp,
   useCanvas,
   useTranslate,
-  useEditorInfo,
   useBreadcrumb,
   useLayout,
   useBlock,
-  useMaterial
+  useMaterial,
+  getMetaApi,
+  META_APP,
+  useMessage,
+  META_SERVICE
 } from '@opentiny/tiny-engine-meta-register'
 
 const { COMPONENT_NAME, DEFAULT_INTERCEPTOR } = constants
@@ -67,8 +68,7 @@ const initPage = (pageInfo) => {
  * @param {string} blockId 区块 id
  */
 const initBlock = async (blockId) => {
-  const { PLUGIN_NAME, getPluginApi } = useLayout()
-  const blockApi = getPluginApi(PLUGIN_NAME.BlockManage)
+  const blockApi = getMetaApi(META_APP.BlockManage)
   const blockContent = await blockApi.getBlockById(blockId)
 
   if (blockContent.public_scope_tenants.length) {
@@ -82,12 +82,11 @@ const initBlock = async (blockId) => {
 }
 
 const initPageOrBlock = async () => {
-  const { pageId, blockId } = useEditorInfo().useInfo()
+  const { pageId, blockId } = getMetaApi(META_SERVICE.GlobalService).getBaseInfo()
   const { setBreadcrumbPage } = useBreadcrumb()
 
   if (pageId) {
-    const { PLUGIN_NAME, getPluginApi } = useLayout()
-    const pagePluginApi = getPluginApi(PLUGIN_NAME.AppManage)
+    const pagePluginApi = getMetaApi(META_APP.AppManage)
 
     const data = await pagePluginApi.getPageById(pageId)
 
@@ -114,7 +113,7 @@ const initPageOrBlock = async () => {
 }
 
 const handlePopStateEvent = async () => {
-  const { id, type } = useEditorInfo().useInfo()
+  const { id, type } = getMetaApi(META_SERVICE.GlobalService).getBaseInfo()
 
   await initPageOrBlock()
 
@@ -123,9 +122,9 @@ const handlePopStateEvent = async () => {
 }
 
 const fetchResource = async ({ isInit = true } = {}) => {
-  const { id, type } = useEditorInfo().useInfo()
-  useApp().appInfoState.selectedId = id
-  const appData = await useHttp().get(`/app-center/v1/api/apps/schema/${id}`)
+  const { id, type } = getMetaApi(META_SERVICE.GlobalService).getBaseInfo()
+  useMessage().publish({ topic: 'app_id_changed', data: id })
+  const appData = await getMetaApi(META_SERVICE.Http).get(`/app-center/v1/api/apps/schema/${id}`)
   resState.pageTree = appData.componentsTree
   resState.dataSource = appData.dataSource?.list
   resState.dataHandler = appData.dataSource?.dataHandler || DEFAULT_INTERCEPTOR.dataHandler

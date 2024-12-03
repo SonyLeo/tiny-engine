@@ -14,7 +14,7 @@
             viewBox="0 0 22 22"
             class="rotate-svg"
           >
-            <circle cx="11" cy="11" r="11" fill="currentColor"></circle>
+            <circle cx="11" cy="11" r="11" fill="#C2C2C2"></circle>
             <circle cx="11" cy="4" r="2" fill="#EEE"></circle>
           </svg>
           <svg
@@ -30,8 +30,8 @@
             <circle cx="11" cy="11" r="11" fill="currentColor"></circle>
           </svg>
         </div>
-        <span @click="counterclockwiseRotate"><svg-icon name="clock-wise-counter"></svg-icon></span>
-        <span @click="clockwiseRotate"><svg-icon name="clock-wise"></svg-icon></span>
+        <span @click="counterclockwiseRotate"><svg-icon name="clock-wise-counter" color="#808080"></svg-icon></span>
+        <span @click="clockwiseRotate"><svg-icon name="clock-wise" color="#808080"></svg-icon></span>
       </div>
       <input-select
         :modelValue="state.angle"
@@ -79,14 +79,18 @@ const updateStyle = (property) => {
   emit('updateStyle', property)
 }
 
-const inputAngle = (val) => {
-  state.angle = Number(val)
-  rotateAngle()
+const angleChange = () => {
+  updateStyle({ [BACKGROUND_PROPERTY.BackgroundImage]: `linear-gradient(${state.angle}deg, black, white)` })
 }
 
 const rotateAngle = () => {
   rotateSvg.value.style.transform = `rotate(${state.angle % DAUBLE_PI_DEG}deg)`
   angleChange()
+}
+
+const inputAngle = (val) => {
+  state.angle = Number(val)
+  rotateAngle()
 }
 
 const counterclockwiseRotate = () => {
@@ -126,10 +130,6 @@ const handleClickAngle = (e) => {
   rotateAngle()
 }
 
-const angleChange = () => {
-  updateStyle({ [BACKGROUND_PROPERTY.BackgroundImage]: `linear-gradient(${state.angle}deg, black, white)` })
-}
-
 const updateGradient = ({ repeat }) => {
   updateStyle({ [BACKGROUND_PROPERTY.BackgroundRepeat]: repeat ?? '' })
 }
@@ -142,7 +142,7 @@ onMounted(() => {
   state.angle = angleMatch ? Number(angleMatch[1]) : ONE_PI_DEG
   rotateAngle()
 
-  const rColor = /\#(?:[a-f0-9]{6}|[a-f0-9]{3})/ // #fff | #fff
+  const rColor = /#(?:[a-f0-9]{6}|[a-f0-9]{3})/ // #fff | #fff
   const rLengthPercentage = /(?:[+-]?\d*\.?\d+)(?:%|[a-z]+)?/ // .5 5px 50%
   const rLinearColorStop = new RegExp(`${rColor.source}(?:\\s+${rLengthPercentage.source})?`)
   const rComma = /\s*,\s*/

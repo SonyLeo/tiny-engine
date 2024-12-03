@@ -1,33 +1,11 @@
 <template>
   <plugin-panel class="outlinebox" title="大纲树" @close="$emit('close')">
     <template #header>
-      <!-- TODO 功能待实现 -->
-      <!-- <tiny-tooltip class="item" effect="dark" :content="state.expandAll ? '收缩' : '展开'" placement="bottom">
-        <span class="icon-ex" @click="toggleTree">
-          <svg-icon v-if="state.expandAll" name="expand"></svg-icon>
-          <svg-icon v-else name="collapse"></svg-icon>
-        </span>
-      </tiny-tooltip> -->
-      <!-- TODO: 保留备份，确认svg-button写法无问题后删除 -->
-      <!-- <tiny-tooltip
-        class="item"
-        effect="dark"
-        :content="!fixedPanels?.includes(PLUGIN_NAME.OutlineTree) ? '固定面板' : '解除固定面板'"
-        placement="bottom"
-      >
-        <span
-          :class="['icon-sidebar', fixedPanels?.includes(PLUGIN_NAME.OutlineTree) && 'active']"
-          @click="$emit('fixPanel', PLUGIN_NAME.OutlineTree)"
-        >
-          <svg-icon name="fixed"></svg-icon>
-        </span>
-      </tiny-tooltip> -->
       <svg-button
         class="item icon-sidebar"
-        :class="[fixedPanels?.includes(PLUGIN_NAME.OutlineTree) && 'active']"
-        :tips="!fixedPanels?.includes(PLUGIN_NAME.OutlineTree) ? '固定面板' : '解除固定面板'"
-        @click="$emit('fixPanel', PLUGIN_NAME.OutlineTree)"
-        name="fixed"
+        :name="panelFixed ? 'fixed-solid' : 'fixed'"
+        :tips="panelFixed ? '解除固定面板' : '固定面板'"
+        @click="$emit('fix-panel', PLUGIN_NAME.OutlineTree)"
       ></svg-button>
     </template>
     <template #content>
@@ -47,8 +25,8 @@
                 class="tree-box"
                 :schemaId="data.row?.id"
                 :type="data.row.componentName"
-                @mouseover="mouseover(data.row, $event)"
-                @mouseleave="mouseleave(data.row, $event)"
+                @mouseover="mouseover(data.row)"
+                @mouseleave="mouseleave(data.row)"
                 @click="checkElement(data.row)"
               >
                 <span class="tree-content">
@@ -57,7 +35,7 @@
                   </span> -->
                   <span>{{ data.row.componentName }}</span>
                 </span>
-                <span v-show="!data.row.show" class="tree-handle" @mouseup="showNode(data.row)">
+                <span v-show="data.row.showEye" class="tree-handle" @mouseup="showNode(data.row)">
                   <icon-eyeopen v-show="data.row.show"></icon-eyeopen>
                   <icon-eyeclose v-show="!data.row.show"></icon-eyeclose>
                 </span>
@@ -76,7 +54,6 @@ import { Grid, GridColumn } from '@opentiny/vue'
 import { PluginPanel, SvgButton } from '@opentiny/tiny-engine-common'
 import { constants } from '@opentiny/tiny-engine-utils'
 import { IconChevronDown, iconEyeopen, iconEyeclose } from '@opentiny/vue-icon'
-// import Sortable from 'sortablejs'
 import { useCanvas, useMaterial, useLayout } from '@opentiny/tiny-engine-meta-register'
 import { extend } from '@opentiny/vue-renderless/common/object'
 import { typeOf } from '@opentiny/vue-renderless/common/type'
@@ -97,14 +74,18 @@ export default {
     }
   },
   emits: ['close', 'fix-panel'],
-  setup() {
+  setup(props) {
     const { pageState, getInstance } = useCanvas()
     const { getMaterial } = useMaterial()
+    const { PLUGIN_NAME } = useLayout()
+
+    const panelFixed = computed(() => props.fixedPanels?.includes(PLUGIN_NAME.OutlineTree))
 
     const filterSchema = (data) => {
       const translateChild = (data) => {
         data.forEach((item) => {
           item.show = pageState.nodesStatus[item.id] !== false
+          item.showEye = !item.show
           const child = item.children
           if (typeOf(child) !== 'array') {
             delete item.children
@@ -120,7 +101,6 @@ export default {
 
       return [{ ...translateChild([extend(true, {}, data)])[0], componentName: 'body' }]
     }
-    const { PLUGIN_NAME } = useLayout()
     const state = reactive({
       pageSchema: [],
       expandAll: true,
@@ -171,7 +151,7 @@ export default {
       return component.icon || 'IconAssociation'
     }
 
-    const mouseover = (data, event) => {
+    const mouseover = (data) => {
       if (state.isLock) {
         return
       }
@@ -179,15 +159,14 @@ export default {
       const { hoverNode } = useCanvas().canvasApi.value
 
       hoverNode(data.id)
-      const handleEl = event.target.querySelector('.tree-handle')
-      handleEl && (handleEl.style.display = 'block')
+      data.showEye = true
     }
 
-    const mouseleave = (data, event) => {
+    const mouseleave = (data) => {
       if (data && !data.show) {
         return
       }
-      event.target.querySelector('.tree-handle').style.display = 'none'
+      data.showEye = false
     }
 
     const checkElement = (row) => {
@@ -285,6 +264,7 @@ export default {
       })
 
     return {
+      panelFixed,
       checkElement,
       mouseover,
       mouseleave,
@@ -309,17 +289,26 @@ export default {
   .tree-wrap {
     height: calc(100% - 38px);
     overflow-y: scroll;
+    padding-top: 12px;
+    border-top: 1px solid var(--ti-lowcode-tree-border-color);
 
-    .tree-handle svg {
-      color: var(--ti-lowcode-tree-icon-color);
+    .tree-handle {
+      svg {
+        color: var(--ti-lowcode-tree-icon-color);
 
-      &:hover {
-        color: var(--ti-lowcode-tree-hover-icon-color);
+        &:hover {
+          color: var(--ti-lowcode-tree-hover-icon-color);
+        }
       }
     }
   }
   :deep(.tiny-grid) {
     background-color: unset;
+    .tree-box {
+      display: flex;
+      width: 200px;
+      justify-content: space-between;
+    }
 
     .tiny-grid-tree-wrapper {
       margin-right: 8px;
@@ -365,6 +354,12 @@ export default {
   }
   :deep(.tiny-grid .tiny-grid__body-wrapper .tiny-grid-body__column) {
     color: var(--ti-lowcode-tree-color);
+    padding: 0 12px;
+    height: 24px !important;
+    line-height: 24px;
+    .tree-content {
+      font-size: 12px;
+    }
   }
   :deep(.tiny-grid .tiny-grid__body-wrapper .high-light-node .tiny-grid-body__column) {
     color: var(--ti-lowcode-tree-selected-color);

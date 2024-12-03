@@ -36,24 +36,14 @@
                 ></template>
 
                 <template #reference>
-                  <tiny-tooltip class="item" effect="dark" :content="item.title" placement="top">
-                    <icon-edit class="tiny-svg-size icon-edit" @click="btnClick($event, item.type)"></icon-edit>
-                  </tiny-tooltip>
+                  <icon-edit class="tiny-svg-size icon-edit" @click="btnClick($event, item.type)"></icon-edit>
                 </template>
               </tiny-popover>
             </template>
             <template v-else>
-              <tiny-tooltip
-                class="item"
-                effect="dark"
-                :content="item.title"
-                placement="top"
-                @click="btnClick($event, item.type)"
-              >
-                <span class="item-icon">
-                  <component :is="item.icon"></component>
-                </span>
-              </tiny-tooltip>
+              <span class="item-icon" @click="btnClick($event, item.type)">
+                <component :is="item.icon"></component>
+              </span>
             </template>
           </template>
         </slot>
@@ -263,10 +253,12 @@ export default {
   margin-bottom: -1px;
   color: var(--ti-lowcode-toolbar-breadcrumb-color);
   &.active-item {
-    background-color: var(--ti-lowcode-tabs-active-bg);
+    background-color: var(--te-common-bg-container);
   }
   .option-input {
     display: flex;
+    height: 24px;
+    align-items: center;
     padding: 2px;
     & > div {
       overflow: hidden;

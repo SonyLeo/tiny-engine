@@ -14,19 +14,18 @@ import {
   Breadcrumb,
   Fullscreen,
   Lang,
-  Checkinout,
   Logo,
+  Lock,
   Media,
   Redoundo,
   Save,
   Clean,
   Preview,
-  GenerateVue,
+  GenerateCode,
   Refresh,
   Collaboration,
-  Setting,
   Materials,
-  Data,
+  State,
   Script,
   Tree,
   Help,
@@ -42,28 +41,40 @@ import {
   Styles,
   Layout,
   Canvas,
-  EditorInfoService,
-  AppService,
-  GenerateCodeService
+  GenerateCodeService,
+  GlobalService
 } from '@opentiny/tiny-engine'
+import engineConfig from './engine.config'
+import { HttpService } from './src/composable'
 
 export default {
   root: {
     id: 'engine.root',
-    metas: [
-      EditorInfoService,
-      AppService,
-      GenerateCodeService
-    ]
+    metas: [HttpService, GenerateCodeService, GlobalService] // GlobalService 依赖 HttpService，HttpService需要在前面处理
   },
-  config: {
-    id: 'engine.config',
-    theme: import.meta.env.VITE_THEME || 'light',
-    material: ['/mock/bundle.json'],
-    scripts: [],
-    styles: []
+  config: engineConfig,
+  layout: {
+    ...Layout,
+    options: {
+      ...Layout.options,
+      isShowLine: true,
+      isShowCollapse: true,
+      toolbars: {
+        left: ['engine.toolbars.breadcrumb', 'engine.toolbars.lock', 'engine.toolbars.logo'],
+        center: ['engine.toolbars.media'],
+        right: [
+          ['engine.toolbars.redoundo', 'engine.toolbars.clean'],
+          ['engine.toolbars.preview'],
+          ['engine.toolbars.generate-code', 'engine.toolbars.save']
+        ],
+        collapse: [
+          ['engine.toolbars.collaboration'],
+          ['engine.toolbars.refresh', 'engine.toolbars.fullscreen'],
+          ['engine.toolbars.lang']
+        ]
+      }
+    }
   },
-  layout: Layout,
   themes: [
     {
       id: 'engine.theme.light'
@@ -75,20 +86,19 @@ export default {
   toolbars: [
     Logo,
     Breadcrumb,
+    Lock,
     Media,
+    Redoundo,
     Collaboration,
     Clean,
-    Refresh,
-    Save,
-    GenerateVue,
     Preview,
-    Redoundo,
+    Refresh,
+    GenerateCode,
+    Save,
     Fullscreen,
-    Checkinout,
-    Setting,
     Lang
   ],
-  plugins: [Materials, Tree, Page, Block, Datasource, Bridge, I18n, Script, Data, Schema, Help, Robot],
+  plugins: [Materials, Tree, Page, Block, Datasource, Bridge, I18n, Script, State, Schema, Help, Robot],
   dsls: [{ id: 'engine.dsls.dslvue' }],
   settings: [Props, Styles, Events],
   canvas: Canvas

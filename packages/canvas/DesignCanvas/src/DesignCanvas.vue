@@ -5,7 +5,8 @@
         :is="CanvasContainer.entry"
         :controller="controller"
         :materials-panel="materialsPanel"
-        :canvas-src="canvasUrl"
+        :canvas-src="canvasSrc"
+        :canvas-src-doc="canvasSrcDoc"
         @remove="removeNode"
         @selected="nodeSelected"
       ></component>
@@ -24,21 +25,20 @@ import {
   useLayout,
   useMaterial,
   useHistory,
-  useModal
+  useModal,
+  getMergeRegistry,
+  getMergeMeta,
+  getOptions,
+  getMetaApi,
+  META_SERVICE
 } from '@opentiny/tiny-engine-meta-register'
-import materials from '@opentiny/tiny-engine-plugin-materials'
-import { useHttp } from '@opentiny/tiny-engine-http'
 import { constants } from '@opentiny/tiny-engine-utils'
-import { isVsCodeEnv, isDevelopEnv } from '@opentiny/tiny-engine-common/js/environments'
 import * as ast from '@opentiny/tiny-engine-common/js/ast'
-import { getMergeRegistry } from '@opentiny/tiny-engine-meta-register'
+import { initCanvas } from '../../init-canvas/init-canvas'
+import { getImportMapData } from './importMap'
+import meta from '../meta'
 
 const { PAGE_STATUS } = constants
-const tenant = new URLSearchParams(location.search).get('tenant') || ''
-const canvasUrl =
-  isVsCodeEnv || isDevelopEnv
-    ? `canvas.html?tenant=${tenant}`
-    : window.location.origin + window.location.pathname + `/canvas?tenant=${tenant}`
 
 const componentType = {
   Block: '区块',
@@ -48,6 +48,7 @@ const componentType = {
 export default {
   setup() {
     const registry = getMergeRegistry('canvas')
+    const materialsPanel = getMergeMeta('engine.plugins.materials')?.entry
     const { CanvasBreadcrumb } = registry.components
     const CanvasLayout = registry.layout.entry
     const [CanvasContainer] = registry.metas
@@ -55,6 +56,13 @@ export default {
     const showMask = ref(true)
     const canvasRef = ref(null)
     let showModal = false // 弹窗标识
+    const { canvasSrc = '' } = getOptions(meta.id) || {}
+    let canvasSrcDoc = ''
+
+    if (!canvasSrc) {
+      const { importMap, importStyles } = getImportMapData(getMergeMeta('engine.config')?.importMapVersion)
+      canvasSrcDoc = initCanvas(importMap, importStyles).html
+    }
 
     const removeNode = (node) => {
       const { pageState } = useCanvas()
@@ -163,17 +171,18 @@ export default {
 
     return {
       removeNode,
-      canvasUrl,
+      canvasSrc,
+      canvasSrcDoc,
       nodeSelected,
       footData,
-      materialsPanel: materials.entry,
+      materialsPanel,
       showMask,
       controller: {
         // 需要在canvas/render或内置组件里使用的方法
         getMaterial: useMaterial().getMaterial,
         addHistory: useHistory().addHistory,
         registerBlock: useMaterial().registerBlock,
-        request: useHttp(),
+        request: getMetaApi(META_SERVICE.Http).getHttp(),
         ast
       },
       CanvasLayout,

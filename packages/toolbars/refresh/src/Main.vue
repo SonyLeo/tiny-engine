@@ -1,31 +1,30 @@
 <template>
-  <tiny-popover
-    trigger="hover"
-    :open-delay="1000"
-    popper-class="toolbar-right-popover"
-    append-to-body
-    content="刷新画布"
-  >
-    <template #reference>
-      <span class="icon" @click="refresh">
-        <svg-icon :name="icon"></svg-icon>
-      </span>
-    </template>
-  </tiny-popover>
+  <toolbar-base content="刷新画布" :icon="options.icon.default || options.icon" :options="options" @click-api="refresh">
+  </toolbar-base>
 </template>
 
 <script>
-import { Popover } from '@opentiny/vue'
-import { useMaterial, useCanvas, useModal, useLayout, useBlock } from '@opentiny/tiny-engine-meta-register'
+import {
+  useMaterial,
+  useCanvas,
+  useModal,
+  useLayout,
+  useBlock,
+  useNotify,
+  useMessage,
+  getOptions
+} from '@opentiny/tiny-engine-meta-register'
+import { ToolbarBase } from '@opentiny/tiny-engine-common'
+import meta from '../meta'
 
 export default {
   components: {
-    TinyPopover: Popover
+    ToolbarBase
   },
   props: {
-    icon: {
-      type: String,
-      default: 'refresh'
+    options: {
+      type: Object,
+      default: () => ({})
     }
   },
   setup() {
@@ -33,12 +32,16 @@ export default {
     const { isBlock, isSaved, pageState, initData } = useCanvas()
     const { PLUGIN_NAME, activePlugin, isEmptyPage } = useLayout()
     const { getCurrentBlock, initBlock } = useBlock()
+    const { beforeRefresh } = getOptions(meta.id)
+    const { publish } = useMessage()
 
-    const refreshResouce = () => {
+    const refreshResource = () => {
       // 清空区块缓存(不能清空组件缓存)，保证画布刷新后可以重新注册最新的区块资源
       useMaterial().clearBlockResources()
       // 因为webcomponents无法重复注册，所以需要刷新内部iframe
       useCanvas().canvasApi.value.getDocument().location.reload()
+      // 通知画布更新完成
+      publish({ topic: 'canvas_refreshed' })
     }
 
     const refreshBlock = async () => {
@@ -47,7 +50,7 @@ export default {
       const api = await activePlugin(PLUGIN_NAME.BlockManage, true)
       await api.refreshBlockData(block)
       await initBlock(block, {}, true)
-      refreshResouce()
+      refreshResource()
     }
 
     const refreshPage = async () => {
@@ -59,10 +62,25 @@ export default {
       const api = await activePlugin(PLUGIN_NAME.AppManage, true)
       const page = await api.getPageById(currentPage.id)
       await initData(page['page_content'], page)
-      refreshResouce()
+      refreshResource()
     }
 
-    const refresh = () => {
+    const refresh = async () => {
+      try {
+        if (typeof beforeRefresh === 'function') {
+          const stop = await beforeRefresh()
+
+          if (stop) {
+            return
+          }
+        }
+      } catch (error) {
+        useNotify({
+          type: 'error',
+          message: `Error in beforeRefresh: ${error}`
+        })
+      }
+
       if (isSaved()) {
         isBlock() ? refreshBlock() : refreshPage()
       } else {
