@@ -70,7 +70,7 @@
 
         <div class="action-icon">
           <slot name="suffix"></slot>
-          <meta-code-editor
+          <code-configurator
             v-if="showCodeEditIcon"
             ref="editorModalRef"
             v-bind="widget.props"
@@ -85,13 +85,13 @@
                 <icon-writing class="code-icon" @click="editorModalRef?.open && editorModalRef.open()"></icon-writing>
               </tiny-tooltip>
             </template>
-          </meta-code-editor>
-          <meta-bind-variable
+          </code-configurator>
+          <variable-configurator
             v-if="isTopLayer && !onlyEdit && property.bindState !== false && !isRelatedComponents(widget.component)"
             :model-value="widget.props.modelValue"
             :name="widget.props.name"
             @update:modelValue="onModelUpdate"
-          ></meta-bind-variable>
+          ></variable-configurator>
         </div>
       </div>
     </div>
@@ -103,14 +103,20 @@ import { inject, computed, watch, ref, reactive, provide } from 'vue'
 import { Popover, Tooltip } from '@opentiny/vue'
 import { IconWriting, IconHelpCircle, IconPlusCircle } from '@opentiny/vue-icon'
 import { typeOf } from '@opentiny/vue-renderless/common/type'
-import i18n from '@opentiny/tiny-engine-controller/js/i18n'
-import { MetaComponents } from '../index'
-import MetaBindVariable from './MetaBindVariable.vue'
-import MetaCodeEditor from './MetaCodeEditor.vue'
+import {
+  useHistory,
+  useProperties,
+  useMaterial,
+  useLayout,
+  useCanvas,
+  getConfigurator
+} from '@opentiny/tiny-engine-meta-register'
+import { utils } from '@opentiny/tiny-engine-utils'
+import i18n from '../js/i18n'
 import MultiTypeSelector from './MultiTypeSelector.vue'
-import { useHistory, useProperties, useResource, useLayout, useCanvas } from '@opentiny/tiny-engine-controller'
-import { generateFunction } from '@opentiny/tiny-engine-controller/utils'
-import { SCHEMA_DATA_TYPE, PAGE_STATUS, TYPES } from '@opentiny/tiny-engine-controller/js/constants'
+import { SCHEMA_DATA_TYPE, PAGE_STATUS, TYPES } from '../js/constants'
+
+const { parseFunction: generateFunction } = utils
 
 const hasRule = (required, rules) => {
   if (required) {
@@ -122,8 +128,8 @@ const hasRule = (required, rules) => {
 export default {
   components: {
     MultiTypeSelector,
-    MetaCodeEditor,
-    MetaBindVariable,
+    CodeConfigurator: getConfigurator('CodeConfigurator'),
+    VariableConfigurator: getConfigurator('VariableConfigurator'),
     TinyPopover: Popover,
     TinyTooltip: Tooltip,
     IconWriting: IconWriting(),
@@ -192,7 +198,9 @@ export default {
         !props.onlyEdit &&
         propLabel.value &&
         (isBindingState.value ||
-          !['MetaGroupItem', 'MetaArrayItem', 'MetaRelatedColumns'].includes(widget.value.component)) &&
+          !['GroupItemConfigurator', 'ArrayItemConfigurator', 'RelatedColumnsConfigurator'].includes(
+            widget.value.component
+          )) &&
         !multiType.value
     )
     const propDescription = computed(
@@ -201,13 +209,14 @@ export default {
         (props.property?.label?.text?.[locale.value] ?? props.property?.label?.text)
     )
     const isLinked = computed(() => Boolean(props.property.linked))
-    const component = computed(() =>
-      multiType.value
+    const component = computed(() => {
+      // TODO: 需要弄清楚 props.metaComponents[widget.value.component] 是什么场景
+      return multiType.value
         ? MultiTypeSelector
-        : props.metaComponents[widget.value.component] ||
-          MetaComponents[widget.value.component] ||
-          MetaComponents['MetaInput']
-    )
+        : getConfigurator(widget.value.component) ||
+            props.metaComponents[widget.value.component] ||
+            getConfigurator('InputConfigurator')
+    })
     const bindValue = computed(() => {
       let value = props.property?.widget?.props?.modelValue
 
@@ -236,7 +245,7 @@ export default {
         return props.property.labelPosition
       }
 
-      if (props.property.widget?.component === 'MetaSwitch') {
+      if (['SwitchConfigurator', 'SwitchConfigurator'].includes(props.property.widget?.component)) {
         return 'left'
       }
 
@@ -252,7 +261,7 @@ export default {
         const currentComponent = useProperties().getSchema().componentName
         const {
           schema: { events = {} }
-        } = useResource().getMaterial(currentComponent)
+        } = useMaterial().getMaterial(currentComponent)
 
         if (Object.keys(events).includes(`onUpdate:${property}`)) {
           // 默认情况下，v-model 在组件上都是使用 modelValue 作为 prop，并以 update:modelValue 作为对应的事件。
@@ -272,7 +281,10 @@ export default {
           return
         }
 
-        if (property !== 'name' && props.property.widget.component === 'MetaSelectIcon') {
+        if (
+          property !== 'name' &&
+          ['SelectIconConfigurator', 'SelectIconConfigurator'].includes(props.property.widget.component)
+        ) {
           // icon以组件形式传入，实现类似:icon="IconPlus"的图标配置（排除Icon组件本身）
           value = {
             componentName: 'Icon',
@@ -447,7 +459,8 @@ export default {
       }
     }
 
-    const isRelatedComponents = (component) => ['MetaRelatedEditor', 'MetaRelatedColumns'].includes(component)
+    const isRelatedComponents = (component) =>
+      ['RelatedEditorConfigurator', 'RelatedColumnsConfigurator'].includes(component)
 
     const showBindState = computed(
       () => !props.onlyEdit && (isBindingState.value || isLinked.value) && !isRelatedComponents(widget.value.component)
@@ -459,7 +472,6 @@ export default {
       editorModalRef,
       isBindingState,
       component,
-      MetaComponents,
       hidden,
       widget,
       required,

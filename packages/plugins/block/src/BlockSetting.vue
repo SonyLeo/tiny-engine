@@ -23,7 +23,7 @@
         <tiny-collapse-item title="基本设置" name="base">
           <block-config ref="blockConfigForm"></block-config>
         </tiny-collapse-item>
-        <tiny-collapse-item v-if="moduleDisplayStatus[dslMode].block" name="attribute">
+        <tiny-collapse-item name="attribute">
           <template #title>
             <div class="title-wrapper">
               <span>设置区块暴露属性</span>
@@ -40,7 +40,7 @@
             </block-property>
           </div>
         </tiny-collapse-item>
-        <tiny-collapse-item v-if="moduleDisplayStatus[dslMode].block" title="事件设置" name="event">
+        <tiny-collapse-item title="事件设置" name="event">
           <template #title>
             <div class="title-wrapper">
               <span>事件设置</span>
@@ -78,9 +78,10 @@
 <script lang="jsx">
 import { reactive, ref, watch, watchEffect, computed } from 'vue'
 import { Button as TinyButton, Collapse as TinyCollapse, CollapseItem as TinyCollapseItem } from '@opentiny/vue'
-import { getGlobalConfig, useModal } from '@opentiny/tiny-engine-controller'
+import { useModal } from '@opentiny/tiny-engine-meta-register'
+import { getMergeMeta } from '@opentiny/tiny-engine-meta-register'
 import { BlockHistoryList, PluginSetting, CloseIcon, SvgButton } from '@opentiny/tiny-engine-common'
-import { previewBlock } from '@opentiny/tiny-engine-controller/js/preview'
+import { previewBlock } from '@opentiny/tiny-engine-common/js/preview'
 import { LifeCycles } from '@opentiny/tiny-engine-common'
 import BlockEvent from './BlockEvent.vue'
 import BlockConfig from './BlockConfig.vue'
@@ -130,8 +131,6 @@ export default {
     }
   },
   setup() {
-    const dslMode = getGlobalConfig()?.dslMode
-    const moduleDisplayStatus = getGlobalConfig()?.moduleDisplayStatus
     const { confirm } = useModal()
     const editBlock = computed(getEditBlock)
     const blockConfigForm = ref(null)
@@ -245,8 +244,8 @@ export default {
         previewBlock({
           id: item.blockId,
           history: item.id,
-          framework: getGlobalConfig()?.dslMode,
-          platform: getGlobalConfig()?.platformId
+          framework: getMergeMeta('engine.config')?.dslMode,
+          platform: getMergeMeta('engine.config')?.platformId
         })
     }
 
@@ -275,12 +274,10 @@ export default {
       editBlock,
       blockConfigForm,
       deployTips: DEPLOY_TIPS,
-      globalConfig: getGlobalConfig(),
+      globalConfig: getMergeMeta('engine.config'),
       onMouseLeave,
       handleClick,
-      handleShowGuide,
-      dslMode,
-      moduleDisplayStatus
+      handleShowGuide
     }
   }
 }

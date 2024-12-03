@@ -24,7 +24,7 @@
 
           <tiny-collapse-item
             class="base-setting"
-            v-if="pageSettingState.currentPageData.group !== 'public' && moduleDisplayStatus[dslMode].page"
+            v-if="pageSettingState.currentPageData.group !== 'public'"
             title="输入输出"
             :name="PAGE_SETTING_SESSION.inputOutput"
           >
@@ -55,20 +55,12 @@
 import { reactive, ref } from 'vue'
 import { Button, Collapse, CollapseItem, Input } from '@opentiny/vue'
 import { PluginSetting, ButtonGroup, SvgButton, LifeCycles } from '@opentiny/tiny-engine-common'
-import {
-  useLayout,
-  usePage,
-  useCanvas,
-  useModal,
-  useApp,
-  useNotify,
-  getGlobalConfig
-} from '@opentiny/tiny-engine-controller'
+import { useLayout, usePage, useCanvas, useModal, useApp, useNotify } from '@opentiny/tiny-engine-meta-register'
 import { extend, isEqual } from '@opentiny/vue-renderless/common/object'
 import { constants } from '@opentiny/tiny-engine-utils'
-import { isVsCodeEnv } from '@opentiny/tiny-engine-controller/js/environments'
-import { handlePageUpdate } from '@opentiny/tiny-engine-controller/js/http'
-import { generatePage } from '@opentiny/tiny-engine-controller/js/vscodeGenerateFile'
+import { isVsCodeEnv } from '@opentiny/tiny-engine-common/js/environments'
+import { handlePageUpdate } from '@opentiny/tiny-engine-common/js/http'
+import { generatePage } from '@opentiny/tiny-engine-common/js/vscodeGenerateFile'
 import PageGeneral from './PageGeneral.vue'
 import PageHistory from './PageHistory.vue'
 import PageInputOutput from './PageInputOutput.vue'
@@ -117,8 +109,6 @@ export default {
   },
   emits: ['openNewPage'],
   setup(props, { emit }) {
-    const dslMode = getGlobalConfig()?.dslMode
-    const moduleDisplayStatus = getGlobalConfig()?.moduleDisplayStatus
     const { requestCreatePage, requestDeletePage } = http
     const { appInfoState } = useApp()
     const {
@@ -379,9 +369,7 @@ export default {
       closePageSettingPanel,
       updatePageLifeCycles,
       restorePage,
-      PAGE_SETTING_SESSION,
-      dslMode,
-      moduleDisplayStatus
+      PAGE_SETTING_SESSION
     }
   }
 }

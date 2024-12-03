@@ -8,11 +8,7 @@
       </div>
       <tiny-tabs v-model="activeName" @click="tabClick" tab-style="button-card">
         <tiny-tab-item :name="STATE.CURRENT_STATE" :title="isBlock ? '区块状态' : '页面状态'"></tiny-tab-item>
-        <tiny-tab-item
-          v-if="moduleDisplayStatus[dslMode].globalState"
-          :name="STATE.GLOBAL_STATE"
-          title="应用状态"
-        ></tiny-tab-item>
+        <tiny-tab-item :name="STATE.GLOBAL_STATE" title="应用状态"></tiny-tab-item>
       </tiny-tabs>
       <tiny-search
         :modelValue="query"
@@ -79,11 +75,10 @@ import {
   useEditorInfo,
   useResource,
   useNotify,
-  useData,
   useLayout,
-  useHelp,
-  getGlobalConfig
-} from '@opentiny/tiny-engine-controller'
+  useHelp
+} from '@opentiny/tiny-engine-meta-register'
+import { getCommentByKey } from '@opentiny/tiny-engine-common/js/comment'
 import { iconSearch } from '@opentiny/vue-icon'
 import { CloseIcon, LinkButton } from '@opentiny/tiny-engine-common'
 import DataSourceList from './DataSourceList.vue'
@@ -117,8 +112,6 @@ export default {
     const addDataSource = ref('添加变量')
     const activeName = ref(STATE.CURRENT_STATE)
     const isBlock = computed(() => useCanvas().isBlock())
-    const dslMode = getGlobalConfig()?.dslMode
-    const moduleDisplayStatus = getGlobalConfig()?.moduleDisplayStatus
     const { setSaved } = useCanvas()
     const { PLUGIN_NAME, getPluginApi } = useLayout()
     const { openCommon } = getPluginApi(PLUGIN_NAME.save)
@@ -273,7 +266,6 @@ export default {
 
       if (key.startsWith('datasource')) {
         const pageSchema = getSchema()
-        const { getCommentByKey } = useData()
         const { start, end } = getCommentByKey(key)
 
         /**
@@ -381,9 +373,7 @@ export default {
       storeRef,
       OPTION_TYPE,
       open,
-      docsUrl,
-      dslMode,
-      moduleDisplayStatus
+      docsUrl
     }
   }
 }

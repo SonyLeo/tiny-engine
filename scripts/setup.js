@@ -1,4 +1,3 @@
-const { exec } = require('child_process')
+const { exec } = require('node:child_process')
 
-exec('pnpm -F @opentiny/tiny-engine-controller -F @opentiny/tiny-engine-dsl-vue build')
-exec('pnpm -F @opentiny/tiny-engine-dsl-react build')
+exec('pnpm -F @opentiny/tiny-engine-vite-plugin-meta-comments -F @opentiny/tiny-engine-common -F @opentiny/tiny-engine-dsl-vue build')

@@ -43,7 +43,7 @@
 import { onMounted, reactive, ref } from 'vue'
 import { PluginPanel, SvgButton } from '@opentiny/tiny-engine-common'
 import { IconChevronRight } from '@opentiny/vue-icon'
-import { useLayout } from '@opentiny/tiny-engine-controller'
+import { useLayout } from '@opentiny/tiny-engine-meta-register'
 import { Collapse, CollapseItem } from '@opentiny/vue'
 import TutorialVideoPanel, { open as openPanel } from './TutorialVideoPanel.vue'
 import { fetchTutorialList } from './js/http'
@@ -103,13 +103,12 @@ export default {
       boxVisibility.value = false
     }
 
+    const { PLUGIN_NAME, getPluginApi } = useLayout()
+
     const openVideoPanel = () => {
-      const { getPluginApi } = useLayout()
-      const { open } = getPluginApi('Tutorial')
+      const { open } = getPluginApi(PLUGIN_NAME.Tutorial)
       open()
     }
-
-    const { PLUGIN_NAME } = useLayout()
 
     return {
       state,
