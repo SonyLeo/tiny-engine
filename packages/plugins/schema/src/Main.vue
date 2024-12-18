@@ -194,6 +194,7 @@ export default {
     justify-content: flex-end;
     align-items: center;
     .icon-wrap {
+      position: relative;
       .tiny-button {
         width: 40px;
         padding: 0;
@@ -203,15 +204,15 @@ export default {
         line-height: 24px;
       }
       .red {
-        width: 5px;
-        height: 5px;
-        border-radius: 3px;
-        background-color: #f00;
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background-color: var(--ti-lowcode-common-error-color);
         display: block;
         z-index: 100;
         position: absolute;
-        top: 1px;
-        right: 1px;
+        top: -3px;
+        right: -4px;
       }
     }
     & > span:not(:last-child) {
