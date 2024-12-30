@@ -75,6 +75,11 @@ export const BLOCK_OPENNESS = {
   Special: 2
 }
 
+export const PREVIEW_SANDBOX = {
+  Web: 'Web',
+  CodeSandbox: 'CodeSandbox'
+}
+
 /**
  * 当前浏览器标签页中 BroadcastChannel 的唯一 id
  * 为了避免在同一个浏览器下打开不同设计器应用造成的消息错乱

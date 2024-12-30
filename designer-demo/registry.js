@@ -21,6 +21,7 @@ import {
   Save,
   Clean,
   Preview,
+  Codesandbox,
   GenerateCode,
   Refresh,
   Collaboration,
@@ -64,7 +65,7 @@ export default {
         center: ['engine.toolbars.media'],
         right: [
           ['engine.toolbars.redoundo', 'engine.toolbars.clean'],
-          ['engine.toolbars.preview'],
+          ['engine.toolbars.preview', 'engine.toolbars.codesandbox'],
           ['engine.toolbars.generate-code', 'engine.toolbars.save']
         ],
         collapse: [
@@ -92,6 +93,7 @@ export default {
     Collaboration,
     Clean,
     Preview,
+    Codesandbox,
     Refresh,
     GenerateCode,
     Save,
