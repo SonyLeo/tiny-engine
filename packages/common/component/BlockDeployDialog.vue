@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import { reactive, ref, watch } from 'vue'
+import { reactive, ref, watch, computed } from 'vue'
 import {
   Checkbox as TinyCheckbox,
   Input as TinyInput,
@@ -81,7 +81,7 @@ import {
   Popover as TinyPopover,
   FormItem as TinyFormItem
 } from '@opentiny/vue'
-import { useCanvas, useNotify, getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
+import { useBlock, useCanvas, useNotify, getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
 import { constants } from '@opentiny/tiny-engine-utils'
 import VueMonaco from './VueMonaco.vue'
 
@@ -174,6 +174,11 @@ export default {
 
     const { setSaved } = useCanvas()
 
+    const isSameBlock = computed(() => {
+      const currentBlock = useBlock().getCurrentBlock()
+      return props.block?.id && props.block?.id === currentBlock?.id
+    })
+
     const deployBlock = async () => {
       deployBlockRef.value.validate((valid) => {
         const { publishBlock } = getMetaApi(META_APP.BlockManage)
@@ -188,7 +193,7 @@ export default {
           }
           publishBlock(params)
           setVisible(false)
-          if (formState.needToSave) {
+          if (formState.needToSave && isSameBlock.value) {
             setSaved(true)
           }
           formState.deployInfo = ''
