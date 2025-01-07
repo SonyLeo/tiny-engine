@@ -188,7 +188,9 @@ export default {
           }
           publishBlock(params)
           setVisible(false)
-          setSaved(true)
+          if (formState.needToSave) {
+            setSaved(true)
+          }
           formState.deployInfo = ''
           formState.version = ''
           formState.needToSave = true
