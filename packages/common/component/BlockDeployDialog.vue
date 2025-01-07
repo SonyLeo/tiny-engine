@@ -81,7 +81,7 @@ import {
   Popover as TinyPopover,
   FormItem as TinyFormItem
 } from '@opentiny/vue'
-import { useNotify, getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
+import { useCanvas, useNotify, getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
 import { constants } from '@opentiny/tiny-engine-utils'
 import VueMonaco from './VueMonaco.vue'
 
@@ -172,6 +172,8 @@ export default {
 
     const setVisible = (visible) => emit('update:visible', visible)
 
+    const { setSaved } = useCanvas()
+
     const deployBlock = async () => {
       deployBlockRef.value.validate((valid) => {
         const { publishBlock } = getMetaApi(META_APP.BlockManage)
@@ -186,6 +188,7 @@ export default {
           }
           publishBlock(params)
           setVisible(false)
+          setSaved(true)
           formState.deployInfo = ''
           formState.version = ''
           formState.needToSave = true

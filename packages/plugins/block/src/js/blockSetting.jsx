@@ -646,42 +646,43 @@ const updateBlock = (block = {}) => {
  * @returns
  */
 const generateBlockDeps = (children, deps = { scripts: [], styles: new Set() }) => {
-  children.forEach((child) => {
-    const component = useMaterial().getMaterial(child.componentName)
+  if (Array.isArray(children)) {
+    children.forEach((child) => {
+      const component = useMaterial().getMaterial(child.componentName)
 
-    if (!component) return
+      if (!component) return
 
-    const { npm, component: componentName } = component
+      const { npm, component: componentName } = component
 
-    if (npm) {
-      const { package: pkg, exportName, css, version, script } = npm
-      const currentPkg = deps.scripts.find((item) => item.package === pkg)
+      if (npm) {
+        const { package: pkg, exportName, css, version, script } = npm
+        const currentPkg = deps.scripts.find((item) => item.package === pkg)
 
-      if (currentPkg) {
-        currentPkg.components[componentName] = exportName
-      } else {
-        deps.scripts.push({
-          package: pkg,
-          version,
-          script,
-          css,
-          components: {
-            [componentName]: exportName
-          }
-        })
+        if (currentPkg) {
+          currentPkg.components[componentName] = exportName
+        } else {
+          deps.scripts.push({
+            package: pkg,
+            version,
+            script,
+            css,
+            components: {
+              [componentName]: exportName
+            }
+          })
+        }
+
+        if (css) {
+          deps.styles.add(css)
+        }
       }
 
-      if (css) {
-        deps.styles.add(css)
+      // 递归查找子区块或子组件
+      if (child.children) {
+        generateBlockDeps(child.children, deps)
       }
-    }
-
-    // 递归查找子区块或子组件
-    if (child.children) {
-      generateBlockDeps(child.children, deps)
-    }
-  })
-
+    })
+  }
   return deps
 }
 
