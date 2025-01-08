@@ -176,7 +176,7 @@ export default {
 
     const isSameBlock = computed(() => {
       const currentBlock = useBlock().getCurrentBlock()
-      return props.block?.id && props.block?.id === currentBlock?.id
+      return props.block?.id === currentBlock?.id
     })
 
     const deployBlock = async () => {
