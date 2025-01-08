@@ -55,13 +55,13 @@
 </template>
 
 <script>
-import { reactive, ref, onUnmounted } from 'vue'
+import { reactive, ref, onUnmounted, onMounted } from 'vue'
 import { VueMonaco } from '@opentiny/tiny-engine-common'
 import { Button, Popover, DialogBox, Checkbox, Select } from '@opentiny/vue'
 import { useCanvas } from '@opentiny/tiny-engine-meta-register'
 import { ToolbarBase } from '@opentiny/tiny-engine-common'
 import { openCommon, saveCommon } from './js/index'
-import { isLoading } from './js/index'
+import { isLoading, setAutoSaveStatus, getAutoSaveStatus } from './js/index'
 import { constants } from '@opentiny/tiny-engine-utils'
 const { OPEN_DELAY } = constants
 
@@ -137,12 +137,17 @@ export default {
       }, state.timeValue * 60 * 1000)
     }
     const autoSave = () => {
+      setAutoSaveStatus(state.checked)
       if (state.checked) {
         saveSetTimeout()
       } else {
         clearTimeout(state.preservationTime)
       }
     }
+
+    onMounted(() => {
+      state.checked = getAutoSaveStatus()
+    })
 
     onUnmounted(() => {
       clearTimeout(state.preservationTime)
