@@ -342,7 +342,7 @@ const operationTypeMap = {
         const nodeItem = getNode(item.id)
         nodesMap.value.delete(item.id)
 
-        if (Array.isArray(nodeItem.children) && nodeItem.children.length) {
+        if (Array.isArray(nodeItem?.children) && nodeItem?.children.length) {
           children.push(...nodeItem.children)
         }
       })

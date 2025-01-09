@@ -9,7 +9,7 @@
       width: selectState.width + 'px'
     }"
   >
-    <div v-if="!resize" ref="labelRef" class="corner-mark-left" :style="labelStyle">
+    <div v-if="showQuickAction" ref="labelRef" class="corner-mark-left" :style="labelStyle">
       <span>{{ selectState.componentName }}</span>
       <TinyPopover
         v-model="showPopover"
@@ -176,6 +176,10 @@ export default {
       type: Boolean,
       default: false
     },
+    selectedNum: {
+      type: Number,
+      default: () => 0
+    },
     windowGetClickEventTarget: Object
   },
   emits: ['remove', 'selectSlot', 'setting'],
@@ -227,12 +231,20 @@ export default {
       updateRect()
     }
 
+    const isSingleNode = computed(() => {
+      return props.selectedNum < 2
+    })
+
     const showAction = computed(() => {
       const { schema, parent } = getCurrent()
       if (schema?.props?.['data-id'] === 'root-container') {
         return false
       }
-      return !props.resize && parent && parent?.type !== 'JSSlot'
+      return !props.resize && parent && parent?.type !== 'JSSlot' && isSingleNode.value
+    })
+
+    const showQuickAction = computed(() => {
+      return !props.resize && isSingleNode.value
     })
 
     const showToParent = computed(() => getCurrent().parent !== useCanvas().getSchema())
@@ -498,6 +510,7 @@ export default {
       optionRef,
       fixStyle,
       showAction,
+      showQuickAction,
       showPopover,
       showToParent,
       activeSetting,
