@@ -71,7 +71,7 @@
 </template>
 
 <script>
-import { reactive, ref, watch, computed } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import {
   Checkbox as TinyCheckbox,
   Input as TinyInput,
@@ -174,10 +174,10 @@ export default {
 
     const { setSaved } = useCanvas()
 
-    const isSameBlock = computed(() => {
+    const isSameBlock = () => {
       const currentBlock = useBlock().getCurrentBlock()
       return props.block?.id === currentBlock?.id
-    })
+    }
 
     const deployBlock = async () => {
       deployBlockRef.value.validate((valid) => {
@@ -193,7 +193,7 @@ export default {
           }
           publishBlock(params)
           setVisible(false)
-          if (formState.needToSave && isSameBlock.value) {
+          if (formState.needToSave && isSameBlock()) {
             setSaved(true)
           }
           formState.deployInfo = ''
