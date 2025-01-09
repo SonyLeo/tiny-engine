@@ -102,6 +102,22 @@ export default {
       }
     }
 
+    const getSelectedState = (element, doc) => {
+      const { top, left, width, height } = element.getBoundingClientRect()
+      const nodeTag = element?.getAttribute(NODE_TAG)
+      const nodeId = element?.getAttribute(NODE_UID)
+
+      return {
+        id: nodeId,
+        componentName: nodeTag,
+        doc,
+        top,
+        left,
+        width,
+        height
+      }
+    }
+
     const setCurrentNode = async (event, doc = null) => {
       const { clientX, clientY } = event
       const element = getElement(event.target)
@@ -110,25 +126,9 @@ export default {
 
       if (element) {
         const currentElement = querySelectById(getCurrent().schema?.id)
-
         if (!currentElement?.contains(element) || event.button === 0) {
-          const { top, left, width, height } = element.getBoundingClientRect()
-          const nodeTag = element?.getAttribute(NODE_TAG)
-          const nodeId = element?.getAttribute(NODE_UID)
-
-          const selectedState = {
-            id: nodeId,
-            componentName: nodeTag,
-            doc,
-            top,
-            left,
-            width,
-            height
-          }
-
-          if (nodeId) {
-            setMultiSelectNode(selectedState)
-          }
+          const selectedState = getSelectedState(element, doc)
+          setMultiSelectNode(selectedState)
 
           const loopId = element.getAttribute(NODE_LOOP)
           if (loopId) {
@@ -137,17 +137,17 @@ export default {
             node = await selectNode(element.getAttribute(NODE_UID))
           }
         }
+      }
 
-        if (event.button === 0 && element !== element.ownerDocument.body) {
-          const { x, y } = element.getBoundingClientRect()
+      if (event.button === 0 && element !== element.ownerDocument.body) {
+        const { x, y } = element.getBoundingClientRect()
 
-          dragStart(node, element, { offsetX: clientX - x, offsetY: clientY - y })
-        }
+        dragStart(node, element, { offsetX: clientX - x, offsetY: clientY - y })
+      }
 
-        // 如果是点击右键则打开右键菜单
-        if (event.button === 2) {
-          openMenu(event)
-        }
+      // 如果是点击右键则打开右键菜单
+      if (event.button === 2) {
+        openMenu(event)
       }
     }
 
@@ -214,19 +214,8 @@ export default {
 
             const element = getElement(event.target)
             if (element) {
-              const { top, left, width, height } = element.getBoundingClientRect()
-              const nodeTag = element?.getAttribute(NODE_TAG)
-              const nodeId = element?.getAttribute(NODE_UID)
-
-              const selectedState = {
-                id: nodeId,
-                componentName: nodeTag,
-                doc,
-                top,
-                left,
-                width,
-                height
-              }
+              const selectedState = getSelectedState(element, doc)
+              const nodeId = selectedState.id
               // 按键触发
               if (event.buttons === 1 && isCtrlPressed.value) {
                 const selectedIds = multiSelectStates.value.map((state) => state.id)
