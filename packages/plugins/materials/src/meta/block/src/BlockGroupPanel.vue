@@ -10,9 +10,14 @@
       <div class="block-add-content">
         <div class="block-add-content-title">区块列表</div>
         <block-group-filters :filters="state.filters" @search="searchBlocks"></block-group-filters>
-        <block-group-transfer :blockList="filteredBlocks">
+        <block-group-transfer v-model:blockList="state.blockList">
           <template #search>
-            <tiny-search class="transfer-order-search" v-model="state.searchValue" placeholder="请输入关键词">
+            <tiny-search
+              class="transfer-order-search"
+              v-model="state.searchValue"
+              placeholder="请输入关键词"
+              @update:modelValue="searchBlocks"
+            >
               <template #prefix>
                 <tiny-icon-search />
               </template>
@@ -24,7 +29,7 @@
   </plugin-setting>
 </template>
 <script>
-import { nextTick, reactive, watch, provide, inject, ref, computed } from 'vue'
+import { nextTick, reactive, watch, provide, inject, ref } from 'vue'
 import { Search } from '@opentiny/vue'
 import { iconSearch } from '@opentiny/vue-icon'
 import { PluginSetting } from '@opentiny/tiny-engine-common'
@@ -37,7 +42,6 @@ import {
   getMetaApi,
   META_SERVICE
 } from '@opentiny/tiny-engine-meta-register'
-import { utils } from '@opentiny/tiny-engine-utils'
 import BlockGroupTransfer from './BlockGroupTransfer.vue'
 import BlockGroupFilters from './BlockGroupFilters.vue'
 
@@ -81,8 +85,6 @@ export default {
     const blockUsers = ref([])
     provide('blockUsers', blockUsers)
 
-    const { escapeRegExp } = utils
-
     const state = reactive({
       searchValue: '',
       blockList: [],
@@ -105,19 +107,6 @@ export default {
           usingSelect: true
         }
       ]
-    })
-
-    const filteredBlocks = computed(() => {
-      if (!state.searchValue) {
-        return state.blockList
-      }
-
-      const searchValue = state.searchValue.trim()
-      const pattern = new RegExp(escapeRegExp(searchValue), 'i')
-
-      return state.blockList.filter((block) => {
-        return pattern.test(block?.name_cn) || pattern.test(block?.label) || pattern.test(block?.description)
-      })
     })
 
     const addBlocks = () => {
@@ -271,7 +260,6 @@ export default {
       selectedGroup,
       state,
       panel,
-      filteredBlocks,
       closeGroupPanel,
       addBlocks,
       searchBlocks
