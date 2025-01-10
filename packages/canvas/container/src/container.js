@@ -10,7 +10,7 @@
  *
  */
 
-import { reactive, toRaw, nextTick, shallowReactive } from 'vue'
+import { reactive, toRaw, nextTick, shallowReactive, ref } from 'vue'
 import {
   addScript as appendScript,
   addStyle as appendStyle,
@@ -81,6 +81,7 @@ export const dragState = reactive({
 })
 
 export const initialRectState = {
+  id: '',
   top: 0,
   height: 0,
   width: 0,
@@ -102,6 +103,8 @@ const initialLineState = {
   doc: null
 }
 
+const multiSelectedStates = ref([])
+
 // 选中画布中元素时的状态
 export const selectState = reactive({
   ...initialRectState
@@ -116,6 +119,38 @@ export const hoverState = reactive({
 export const lineState = reactive({
   ...initialLineState
 })
+
+export function setMultiSelectNode(node, append = false) {
+  if (!node || typeof node !== 'object') {
+    multiSelectedStates.value = []
+    return
+  }
+
+  if (append) {
+    const nodeIds = new Set(multiSelectedStates.value.map((state) => state.id))
+    if (!nodeIds.has(node.id)) {
+      multiSelectedStates.value = [...multiSelectedStates.value, node]
+    }
+  } else {
+    if (Array.isArray(node)) {
+      multiSelectedStates.value = node
+    } else {
+      multiSelectedStates.value = [node]
+    }
+  }
+}
+
+export function handleMultiSelect(selectState) {
+  const nodeId = selectState.id
+  const isExistNode = multiSelectedStates.value.map((state) => state.id).includes(nodeId)
+
+  if (nodeId && isExistNode) {
+    const exList = multiSelectedStates.value.filter((state) => state.id !== nodeId)
+    setMultiSelectNode(exList)
+  } else {
+    setMultiSelectNode(selectState, true)
+  }
+}
 
 export const clearHover = () => {
   Object.assign(hoverState, initialRectState, { slot: null })
@@ -346,13 +381,15 @@ export const scrollToNode = (element) => {
 
   return nextTick()
 }
-const setSelectRect = (element) => {
+export const setSelectRect = (element) => {
   element = element || getDocument().body
 
+  const id = element.getAttribute(NODE_UID)
   const { left, height, top, width } = getRect(element)
   const componentName = getCurrent().schema?.componentName || ''
   clearHover()
-  Object.assign(selectState, {
+  return Object.assign(selectState, {
+    id,
     width,
     height,
     top,

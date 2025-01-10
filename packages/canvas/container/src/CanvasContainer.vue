@@ -1,16 +1,13 @@
 <template>
-  <div v-for="selectedState in multiSelectStates" :key="selectedState.id">
-    <canvas-action
-      :hoverState="hoverState"
-      :selectState="selectedState"
-      :lineState="lineState"
-      :selectedNum="selectedNum"
-      :windowGetClickEventTarget="target"
-      :resize="canvasState.type === 'absolute'"
-      @select-slot="selectSlot"
-      @setting="settingModel"
-    ></canvas-action>
-  </div>
+  <canvas-action
+    :hoverState="hoverState"
+    :selectState="selectState"
+    :lineState="lineState"
+    :windowGetClickEventTarget="target"
+    :resize="canvasState.type === 'absolute'"
+    @select-slot="selectSlot"
+    @setting="settingModel"
+  ></canvas-action>
   <canvas-divider :selectState="selectState"></canvas-divider>
   <canvas-resize-border :iframe="iframe"></canvas-resize-border>
   <canvas-resize>
@@ -35,8 +32,8 @@
 import { onMounted, ref, computed, onUnmounted, watch, watchEffect } from 'vue'
 import { iframeMonitoring } from '@opentiny/tiny-engine-common/js/monitor'
 import { useTranslate, useCanvas, useMaterial, useMessage, useResource } from '@opentiny/tiny-engine-meta-register'
-import { NODE_UID, NODE_LOOP, DESIGN_MODE, NODE_TAG } from '../../common'
-import { registerHostkeyEvent, removeHostkeyEvent } from './keyboard'
+import { NODE_UID, NODE_LOOP, DESIGN_MODE } from '../../common'
+import { registerHotkeyEvent, removeHotkeyEvent, isCtrlPressed } from './keyboard'
 import CanvasMenu, { closeMenu, openMenu } from './components/CanvasMenu.vue'
 import CanvasAction from './components/CanvasAction.vue'
 import CanvasResize from './components/CanvasResize.vue'
@@ -59,7 +56,9 @@ import {
   clearLineState,
   querySelectById,
   getCurrent,
-  canvasApi
+  canvasApi,
+  handleMultiSelect,
+  setSelectRect
 } from './container'
 
 export default {
@@ -79,46 +78,8 @@ export default {
     let showSettingModel = ref(false)
     let target = ref(null)
     const srcAttrName = computed(() => (props.canvasSrc ? 'src' : 'srcdoc'))
-    const multiSelectStates = ref([])
-    const selectedNum = computed(() => multiSelectStates.value.length)
 
-    function setMultiSelectNode(node, append = false) {
-      if (!node || typeof node !== 'object') {
-        multiSelectStates.value = []
-        return
-      }
-
-      if (append) {
-        const nodeIds = new Set(multiSelectStates.value.map((state) => state.id))
-        if (!nodeIds.has(node.id)) {
-          multiSelectStates.value = [...multiSelectStates.value, node]
-        }
-      } else {
-        if (Array.isArray(node)) {
-          multiSelectStates.value = node
-        } else {
-          multiSelectStates.value = [node]
-        }
-      }
-    }
-
-    const getSelectedState = (element, doc) => {
-      const { top, left, width, height } = element.getBoundingClientRect()
-      const nodeTag = element?.getAttribute(NODE_TAG)
-      const nodeId = element?.getAttribute(NODE_UID)
-
-      return {
-        id: nodeId,
-        componentName: nodeTag,
-        doc,
-        top,
-        left,
-        width,
-        height
-      }
-    }
-
-    const setCurrentNode = async (event, doc = null) => {
+    const setCurrentNode = async (event) => {
       const { clientX, clientY } = event
       const element = getElement(event.target)
       closeMenu()
@@ -126,9 +87,9 @@ export default {
 
       if (element) {
         const currentElement = querySelectById(getCurrent().schema?.id)
+
         if (!currentElement?.contains(element) || event.button === 0) {
-          const selectedState = getSelectedState(element, doc)
-          setMultiSelectNode(selectedState)
+          handleMultiSelect(setSelectRect(element))
 
           const loopId = element.getAttribute(NODE_LOOP)
           if (loopId) {
@@ -137,17 +98,17 @@ export default {
             node = await selectNode(element.getAttribute(NODE_UID))
           }
         }
-      }
 
-      if (event.button === 0 && element !== element.ownerDocument.body) {
-        const { x, y } = element.getBoundingClientRect()
+        if (event.button === 0 && element !== element.ownerDocument.body) {
+          const { x, y } = element.getBoundingClientRect()
 
-        dragStart(node, element, { offsetX: clientX - x, offsetY: clientY - y })
-      }
+          dragStart(node, element, { offsetX: clientX - x, offsetY: clientY - y })
+        }
 
-      // 如果是点击右键则打开右键菜单
-      if (event.button === 2) {
-        openMenu(event)
+        // 如果是点击右键则打开右键菜单
+        if (event.button === 2) {
+          openMenu(event)
+        }
       }
     }
 
@@ -189,8 +150,6 @@ export default {
       return handler()
     }
 
-    const isCtrlPressed = ref(false)
-
     const canvasReady = ({ detail }) => {
       if (iframe.value) {
         // 设置monitor报错埋点
@@ -213,47 +172,20 @@ export default {
             }
 
             const element = getElement(event.target)
-            if (element) {
-              const selectedState = getSelectedState(element, doc)
-              const nodeId = selectedState.id
-              // 按键触发
-              if (event.buttons === 1 && isCtrlPressed.value) {
-                const selectedIds = multiSelectStates.value.map((state) => state.id)
-                if (nodeId && selectedIds.includes(nodeId)) {
-                  const exList = multiSelectStates.value.filter((state) => state.id !== nodeId)
-                  setMultiSelectNode(exList)
-                } else {
-                  setMultiSelectNode(selectedState, true)
-                }
-                return
-              }
+            if (!element) {
+              return
             }
 
-            if (event.button === 0 && element.tagName.toLocaleLowerCase() === 'body') {
-              setMultiSelectNode(null)
+            // 多选组合键触发
+            if (event.buttons === 1 && isCtrlPressed.value) {
+              handleMultiSelect(setSelectRect(element))
               return
             }
 
             insertPosition.value = false
-            setCurrentNode(event, doc)
+            setCurrentNode(event)
             target.value = event.target
           })
-        })
-
-        win.addEventListener('keydown', (event) => {
-          const { keyCode } = event
-
-          if (keyCode === 17) {
-            isCtrlPressed.value = true
-          }
-        })
-
-        win.addEventListener('keyup', (event) => {
-          const { keyCode } = event
-
-          if (keyCode === 17) {
-            isCtrlPressed.value = false
-          }
         })
 
         win.addEventListener('scroll', () => {
@@ -292,7 +224,7 @@ export default {
           e.preventDefault()
         }
 
-        registerHostkeyEvent(doc)
+        registerHotkeyEvent(doc)
 
         win.addEventListener('scroll', updateRect, true)
       }
@@ -337,7 +269,7 @@ export default {
     onMounted(() => run(iframe))
     onUnmounted(() => {
       if (iframe.value?.contentDocument) {
-        removeHostkeyEvent(iframe.value.contentDocument)
+        removeHotkeyEvent(iframe.value.contentDocument)
       }
       window.removeEventListener('message', updateI18n, false)
     })
@@ -361,9 +293,7 @@ export default {
       showSettingModel,
       insertPosition,
       loading,
-      srcAttrName,
-      selectedNum,
-      multiSelectStates
+      srcAttrName
     }
   }
 }

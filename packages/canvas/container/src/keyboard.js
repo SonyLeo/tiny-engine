@@ -24,6 +24,7 @@ import {
 import { useHistory, useCanvas } from '@opentiny/tiny-engine-meta-register'
 import { copyObject } from '../../common'
 import { getClipboardSchema, setClipboardSchema } from './utils'
+import { ref } from 'vue'
 
 const KEY_Y = 89
 const KEY_Z = 90
@@ -32,6 +33,9 @@ const KEY_LEFT = 37
 const KEY_UP = 38
 const KEY_DOWN = 40
 const KEY_DEL = 46
+const KEY_CTRL = 17
+
+const isCtrlPressed = ref(false)
 
 function handlerLeft({ parent }) {
   selectNode(parent?.id)
@@ -120,7 +124,11 @@ const handlerClipboardEvent = (event) => {
   }
 }
 
-const keyboardHandler = (event) => {
+const handleKeydownEvent = (event) => {
+  if (event.keyCode === KEY_CTRL) {
+    isCtrlPressed.value = true
+  }
+
   if (event.ctrlKey) {
     getCurrent()?.schema && handlerCtrl(event.keyCode)
   }
@@ -128,20 +136,28 @@ const keyboardHandler = (event) => {
   handlerArrow(event.keyCode)
 }
 
-const removeHostkeyEvent = (dom) => {
-  dom.removeEventListener('keydown', keyboardHandler)
+const handleKeyupEvent = (event) => {
+  if (event.keyCode === KEY_CTRL) {
+    isCtrlPressed.value = false
+  }
+}
+
+const removeHotkeyEvent = (dom) => {
+  dom.removeEventListener('keydown', handleKeydownEvent)
+  dom.removeEventListener('keyup', handleKeyupEvent)
   dom.removeEventListener('copy', handlerClipboardEvent)
   dom.removeEventListener('cut', handlerClipboardEvent)
   dom.removeEventListener('paste', handlerClipboardEvent)
 }
 
-const registerHostkeyEvent = (dom) => {
-  removeHostkeyEvent(dom)
+const registerHotkeyEvent = (dom) => {
+  removeHotkeyEvent(dom)
 
-  dom.addEventListener('keydown', keyboardHandler)
+  dom.addEventListener('keydown', handleKeydownEvent)
+  dom.addEventListener('keyup', handleKeyupEvent)
   dom.addEventListener('copy', handlerClipboardEvent)
   dom.addEventListener('cut', handlerClipboardEvent)
   dom.addEventListener('paste', handlerClipboardEvent)
 }
 
-export { registerHostkeyEvent, removeHostkeyEvent }
+export { registerHotkeyEvent, removeHotkeyEvent, isCtrlPressed }
