@@ -58,14 +58,14 @@ export default {
       minimap: {
         enabled: false
       },
-      placeholder: `// ✅ 函数声明(可以保存)
-      \n function topLevelFunction(){ 
-      \n   const message = 'hello tiny-engine.' 
-      \n   console.log(message) 
+      placeholder: `// ✅ 函数声明可以保存
+      \n function topLevelFunction(){ \n
+      \u200B \u200B const message = 'hello tiny-engine.' \n
+      \u200B \u200B console.log(message) 
       \n }
-      \n \n // ❌ 变量声明/表达式(不能保存) \n
-      // 顶层/常规 变量声明 \n const someVariable = 42 \n
-      // 表达式 \n const result = someVariable + 10`,
+      \n 
+      // ❌ 顶层/常规 变量声明 \n const someVariable = 42 \n
+      // ❌ 表达式 \n const result = someVariable + 10`,
 
       // 禁用滚动条边边一直显示的边框
       overviewRulerBorder: false,
