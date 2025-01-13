@@ -1,13 +1,16 @@
 <template>
-  <canvas-action
-    :hoverState="hoverState"
-    :selectState="selectState"
-    :lineState="lineState"
-    :windowGetClickEventTarget="target"
-    :resize="canvasState.type === 'absolute'"
-    @select-slot="selectSlot"
-    @setting="settingModel"
-  ></canvas-action>
+  <div v-for="selectedState in multiSelectedStates" :key="selectedState.id">
+    <canvas-action
+      :hoverState="hoverState"
+      :selectState="selectedState"
+      :lineState="lineState"
+      :windowGetClickEventTarget="target"
+      :resize="canvasState.type === 'absolute'"
+      :selectedNum="selectedNum"
+      @select-slot="selectSlot"
+      @setting="settingModel"
+    ></canvas-action>
+  </div>
   <canvas-divider :selectState="selectState"></canvas-divider>
   <canvas-resize-border :iframe="iframe"></canvas-resize-border>
   <canvas-resize>
@@ -57,8 +60,9 @@ import {
   querySelectById,
   getCurrent,
   canvasApi,
+  getSelectedState,
   handleMultiSelect,
-  setSelectRect
+  setMultiSelectNode
 } from './container'
 
 export default {
@@ -79,7 +83,10 @@ export default {
     let target = ref(null)
     const srcAttrName = computed(() => (props.canvasSrc ? 'src' : 'srcdoc'))
 
-    const setCurrentNode = async (event) => {
+    const multiSelectedStates = ref([])
+    const selectedNum = computed(() => multiSelectedStates.value.length)
+
+    const setCurrentNode = async (event, doc = null) => {
       const { clientX, clientY } = event
       const element = getElement(event.target)
       closeMenu()
@@ -89,7 +96,8 @@ export default {
         const currentElement = querySelectById(getCurrent().schema?.id)
 
         if (!currentElement?.contains(element) || event.button === 0) {
-          handleMultiSelect(setSelectRect(element))
+          const targetSelectedState = getSelectedState(element, doc)
+          setMultiSelectNode(multiSelectedStates, targetSelectedState)
 
           const loopId = element.getAttribute(NODE_LOOP)
           if (loopId) {
@@ -177,13 +185,16 @@ export default {
             }
 
             // 多选组合键触发
-            if (event.buttons === 1 && isCtrlPressed.value) {
-              handleMultiSelect(setSelectRect(element))
-              return
+            if (element) {
+              const selectedState = getSelectedState(element, doc)
+              if (event.buttons === 1 && isCtrlPressed.value) {
+                handleMultiSelect(multiSelectedStates, selectedState)
+                return
+              }
             }
 
             insertPosition.value = false
-            setCurrentNode(event)
+            setCurrentNode(event, doc)
             target.value = event.target
           })
         })
@@ -293,7 +304,9 @@ export default {
       showSettingModel,
       insertPosition,
       loading,
-      srcAttrName
+      srcAttrName,
+      selectedNum,
+      multiSelectedStates
     }
   }
 }

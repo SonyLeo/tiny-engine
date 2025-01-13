@@ -10,7 +10,7 @@
  *
  */
 
-import { reactive, toRaw, nextTick, shallowReactive, ref } from 'vue'
+import { reactive, toRaw, nextTick, shallowReactive } from 'vue'
 import {
   addScript as appendScript,
   addStyle as appendStyle,
@@ -103,8 +103,6 @@ const initialLineState = {
   doc: null
 }
 
-const multiSelectedStates = ref([])
-
 // 选中画布中元素时的状态
 export const selectState = reactive({
   ...initialRectState
@@ -120,7 +118,8 @@ export const lineState = reactive({
   ...initialLineState
 })
 
-export function setMultiSelectNode(node, append = false) {
+// 设置多选节点
+export function setMultiSelectNode(multiSelectedStates, node, append = false) {
   if (!node || typeof node !== 'object') {
     multiSelectedStates.value = []
     return
@@ -140,15 +139,16 @@ export function setMultiSelectNode(node, append = false) {
   }
 }
 
-export function handleMultiSelect(selectState) {
-  const nodeId = selectState.id
+// 处理多选节点
+export function handleMultiSelect(multiSelectedStates, selectState) {
+  const nodeId = selectState?.id
   const isExistNode = multiSelectedStates.value.map((state) => state.id).includes(nodeId)
 
   if (nodeId && isExistNode) {
     const exList = multiSelectedStates.value.filter((state) => state.id !== nodeId)
-    setMultiSelectNode(exList)
+    setMultiSelectNode(multiSelectedStates, exList)
   } else {
-    setMultiSelectNode(selectState, true)
+    setMultiSelectNode(multiSelectedStates, selectState, true)
   }
 }
 
@@ -259,6 +259,22 @@ export const getElement = (element) => {
   }
 
   return undefined
+}
+
+export const getSelectedState = (element, doc) => {
+  const { top, left, width, height } = element.getBoundingClientRect()
+  const nodeTag = element?.getAttribute(NODE_TAG)
+  const nodeId = element?.getAttribute(NODE_UID)
+
+  return {
+    id: nodeId,
+    componentName: nodeTag,
+    doc,
+    top,
+    left,
+    width,
+    height
+  }
 }
 
 const getRect = (element) => {
@@ -384,12 +400,10 @@ export const scrollToNode = (element) => {
 export const setSelectRect = (element) => {
   element = element || getDocument().body
 
-  const id = element.getAttribute(NODE_UID)
   const { left, height, top, width } = getRect(element)
   const componentName = getCurrent().schema?.componentName || ''
   clearHover()
   return Object.assign(selectState, {
-    id,
     width,
     height,
     top,
