@@ -147,6 +147,9 @@ export default {
 
     onMounted(() => {
       state.checked = getAutoSaveStatus()
+      if (state.checked) {
+        saveSetTimeout()
+      }
     })
 
     onUnmounted(() => {
