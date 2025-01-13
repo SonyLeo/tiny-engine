@@ -6,15 +6,12 @@
         <link-button :href="docsUrl"></link-button>
       </div>
       <div class="head-right">
+        <tiny-button type="primary" class="save-btn" @click="saveMethods">
+          <span>保存</span>
+          <span v-show="state.isChanged" class="dots"></span>
+        </tiny-button>
         <close-icon @close="close"></close-icon>
       </div>
-    </div>
-    <div class="alert-container">
-      <tiny-alert
-        description="注意：JS 面板顶层只支持函数声明，其余变量声明、表达式、类声明均不会保存。"
-        custom-class="tiny-alert_custom"
-        :closable="false"
-      />
     </div>
     <div class="code-edit-content">
       <monaco-editor
@@ -30,7 +27,7 @@
 
 <script>
 import { onBeforeUnmount } from 'vue'
-import { Alert } from '@opentiny/vue'
+import { Button } from '@opentiny/vue'
 import { VueMonaco, CloseIcon, LinkButton } from '@opentiny/tiny-engine-common'
 import { useHelp } from '@opentiny/tiny-engine-meta-register'
 import { initCompletion } from '@opentiny/tiny-engine-common/js/completion'
@@ -47,9 +44,9 @@ export const api = {
 export default {
   components: {
     MonacoEditor: VueMonaco,
+    TinyButton: Button,
     CloseIcon,
-    LinkButton,
-    TinyAlert: Alert
+    LinkButton
   },
   emits: ['close'],
   setup(props, { emit }) {
@@ -61,6 +58,15 @@ export default {
       minimap: {
         enabled: false
       },
+      placeholder: `// ✅ 函数声明(可以保存)
+      \n function topLevelFunction(){ 
+      \n   const message = 'hello tiny-engine.' 
+      \n   console.log(message) 
+      \n }
+      \n \n // ❌ 变量声明/表达式(不能保存) \n
+      // 顶层/常规 变量声明 \n const someVariable = 42 \n
+      // 表达式 \n const result = someVariable + 10`,
+
       // 禁用滚动条边边一直显示的边框
       overviewRulerBorder: false,
       renderLineHighlightOnlyWhenFocus: true
@@ -183,25 +189,5 @@ export default {
   #help-icon {
     margin-left: 5px;
   }
-}
-
-.alert-container {
-  padding: 0 12px;
-
-  .tiny-alert_custom {
-    border: 0;
-    padding: 8px 0;
-    margin-top: 12px;
-    margin-bottom: 0;
-    padding-left: 17px;
-    border-radius: 4px;
-    background: rgb(240, 247, 255);
-  }
-}
-
-:deep(.tiny-alert__description) {
-  font-weight: 400;
-  letter-spacing: 0;
-  text-align: left;
 }
 </style>
