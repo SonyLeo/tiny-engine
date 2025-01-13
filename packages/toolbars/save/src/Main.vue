@@ -20,7 +20,7 @@
               </tiny-select>
             </div>
             <div class="save-button-group">
-              <tiny-button type="primary" @click="autoSave">设置并保存</tiny-button>
+              <tiny-button type="primary" @click="saveConfig">设置并保存</tiny-button>
             </div>
           </div>
         </tiny-popover>
@@ -136,7 +136,7 @@ export default {
         saveSetTimeout()
       }, state.timeValue * 60 * 1000)
     }
-    const autoSave = () => {
+    const saveConfig = () => {
       setAutoSaveStatus(state.checked)
       if (state.checked) {
         saveSetTimeout()
@@ -163,7 +163,7 @@ export default {
       openApi,
       saveApi,
       delayOptions,
-      autoSave,
+      saveConfig,
       OPEN_DELAY
     }
   }
