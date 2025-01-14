@@ -86,6 +86,15 @@ export default {
     const multiSelectedStates = ref([])
     const selectedNum = computed(() => multiSelectedStates.value.length)
 
+    watch(
+      () => selectedNum.value,
+      (newVal) => {
+        if (newVal > 1) {
+          selectNode(null)
+        }
+      }
+    )
+
     const setCurrentNode = async (event, doc = null) => {
       const { clientX, clientY } = event
       const element = getElement(event.target)
