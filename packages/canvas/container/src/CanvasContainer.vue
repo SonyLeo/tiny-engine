@@ -25,9 +25,18 @@
     <div v-else class="datainit-tip">应用数据初始化中...</div>
   </canvas-resize>
   <canvas-menu @insert="insertComponent"></canvas-menu>
-  <!-- 快捷选择物料面板 -->
+  <!-- 【插入】快捷选择物料面板 -->
   <div v-if="insertPosition" ref="insertPanel" class="insert-panel">
     <component :is="materialsPanel" :shortcut="insertPosition" @close="insertPosition = false"></component>
+  </div>
+  <!-- 【添加父级容器】快捷选择物料面板 -->
+  <div v-if="insertContainer" ref="containerPanel" class="insert-panel">
+    <component
+      :is="materialsPanel"
+      :shortcut="insertContainer"
+      groupName="layout"
+      @close="insertContainer = false"
+    ></component>
   </div>
 </template>
 
@@ -85,6 +94,9 @@ export default {
 
     const multiSelectedStates = ref([])
     const selectedNum = computed(() => multiSelectedStates.value.length)
+
+    const containerPanel = ref(null)
+    const insertContainer = ref(false)
 
     watch(
       () => selectedNum.value,
@@ -202,6 +214,7 @@ export default {
               }
             }
 
+            insertContainer.value = false
             insertPosition.value = false
             setCurrentNode(event, doc)
             target.value = event.target
@@ -217,6 +230,7 @@ export default {
             return
           }
 
+          insertContainer.value = false
           insertPosition.value = false
           setCurrentNode(event)
           target.value = event.target
@@ -267,6 +281,8 @@ export default {
       // 以下是外部window需要监听的事件
       window.addEventListener('mousedown', (e) => {
         insertPosition.value = insertPanel.value?.contains(e.target)
+        insertContainer.value = containerPanel.value?.contains(e.target)
+
         target.value = e.target
       })
 
@@ -279,7 +295,11 @@ export default {
     }
 
     const insertComponent = (position) => {
-      insertPosition.value = position
+      if (position === 'layout') {
+        insertContainer.value = position
+      } else {
+        insertPosition.value = position
+      }
     }
 
     const selectSlot = (slotName) => {
@@ -308,10 +328,12 @@ export default {
       canvasState,
       insertComponent,
       insertPanel,
+      containerPanel,
       settingModel,
       target,
       showSettingModel,
       insertPosition,
+      insertContainer,
       loading,
       srcAttrName,
       selectedNum,

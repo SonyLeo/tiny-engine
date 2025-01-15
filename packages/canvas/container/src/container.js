@@ -29,7 +29,8 @@ export const POSITION = Object.freeze({
   BOTTOM: 'bottom',
   LEFT: 'left',
   RIGHT: 'right',
-  IN: 'in'
+  IN: 'in',
+  PARENT: 'layout'
 })
 
 const initialDragState = {
@@ -332,6 +333,20 @@ const insertInner = ({ node, data }, position) => {
     parentId: node.id,
     newNodeData: data,
     position: [POSITION.TOP, POSITION.LEFT].includes(position) ? 'before' : 'after'
+  })
+}
+
+const insertParent = ({ parent, node, data }) => {
+  if (!data.id) {
+    data.id = utils.guid()
+  }
+
+  useCanvas().operateNode({
+    type: 'insert',
+    parentId: parent.id,
+    newNodeData: data,
+    position: POSITION.PARENT,
+    referTargetNodeId: node.id
   })
 }
 
@@ -737,6 +752,9 @@ export const insertNode = (node, position = POSITION.IN, select = true) => {
         break
       case POSITION.IN:
         insertInner(node)
+        break
+      case POSITION.PARENT:
+        insertParent(node)
         break
       default:
         insertInner(node)
