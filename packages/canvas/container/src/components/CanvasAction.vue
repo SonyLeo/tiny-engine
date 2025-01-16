@@ -418,6 +418,10 @@ export default {
         verticalValue: -OPTION_BAR_HEIGHT
       })
 
+      if (!doc) {
+        return {}
+      }
+
       const scrollBarWidth = doc.documentElement.scrollHeight > doc.documentElement.clientHeight ? SCROLL_BAR_WIDTH : 0
 
       if (width < fullRectWidth) {

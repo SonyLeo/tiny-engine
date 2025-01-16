@@ -21,12 +21,13 @@ import {
   clearHover,
   hoverState
 } from './container'
-import { useHistory, useCanvas } from '@opentiny/tiny-engine-meta-register'
+import { useHistory, useCanvas, getMetaApi, META_APP } from '@opentiny/tiny-engine-meta-register'
 import { copyObject } from '../../common'
 import { getClipboardSchema, setClipboardSchema } from './utils'
 import { ref } from 'vue'
 
 const KEY_Y = 89
+const KEY_S = 83
 const KEY_Z = 90
 const KEY_RIGHT = 39
 const KEY_LEFT = 37
@@ -81,13 +82,24 @@ const handlerArrow = (keyCode) => {
   }
 }
 
-const handlerCtrl = (keyCode) => {
+const handleSaveEvent = (event) => {
+  const { openCommon } = getMetaApi(META_APP.Save)
+  event.preventDefault()
+  openCommon()
+}
+
+const handlerCtrl = (event) => {
+  const keyCode = event.keyCode
+  isCtrlPressed.value = true
   switch (keyCode) {
     case KEY_Y:
       useHistory().forward()
       break
     case KEY_Z:
       useHistory().back()
+      break
+    case KEY_S:
+      handleSaveEvent(event)
       break
     default:
       break
@@ -103,6 +115,8 @@ const handleClipboardCut = (event, schema) => {
 const handleClipboardPaste = (node, schema, parent) => {
   if (node?.componentName && schema?.componentName && allowInsert(getConfigure(schema.componentName), node)) {
     insertNode({ parent, node: schema, data: { ...node } }, POSITION.IN)
+  } else {
+    insertNode({ parent, node: schema, data: { ...node } }, POSITION.BOTTOM)
   }
 }
 
@@ -125,12 +139,8 @@ const handlerClipboardEvent = (event) => {
 }
 
 const handleKeydownEvent = (event) => {
-  if (event.keyCode === KEY_CTRL) {
-    isCtrlPressed.value = true
-  }
-
   if (event.ctrlKey) {
-    getCurrent()?.schema && handlerCtrl(event.keyCode)
+    handlerCtrl(event)
   }
 
   handlerArrow(event.keyCode)

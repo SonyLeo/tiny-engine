@@ -2,7 +2,7 @@
   <div v-for="selectedState in multiSelectedStates" :key="selectedState.id">
     <canvas-action
       :hoverState="hoverState"
-      :selectState="selectedState"
+      :selectState="selectedNum > 1 ? selectedState : selectState"
       :lineState="lineState"
       :windowGetClickEventTarget="target"
       :resize="canvasState.type === 'absolute'"

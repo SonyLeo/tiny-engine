@@ -299,6 +299,9 @@ const operationTypeMap = {
           parentNode.children.splice(index, 1, newNodeData)
         }
         break
+      case 'bottom':
+        parentNode.children.splice(index + 1, 0, newNodeData)
+        break
       default:
         parentNode.children.push(newNodeData)
         break

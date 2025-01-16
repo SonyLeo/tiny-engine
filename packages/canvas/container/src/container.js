@@ -295,7 +295,7 @@ const getRect = (element) => {
   return element.getBoundingClientRect()
 }
 
-const inserAfter = ({ parent, node, data }) => {
+const insertAfter = ({ parent, node, data }) => {
   if (!data.id) {
     data.id = utils.guid()
   }
@@ -305,6 +305,20 @@ const inserAfter = ({ parent, node, data }) => {
     parentId: parent.id,
     newNodeData: data,
     position: 'after',
+    referTargetNodeId: node.id
+  })
+}
+
+const insertBottom = ({ parent, node, data }) => {
+  if (!data.id) {
+    data.id = utils.guid()
+  }
+
+  useCanvas().operateNode({
+    type: 'insert',
+    parentId: parent.id,
+    newNodeData: data,
+    position: 'bottom',
     referTargetNodeId: node.id
   })
 }
@@ -747,8 +761,10 @@ export const insertNode = (node, position = POSITION.IN, select = true) => {
         insertBefore(node)
         break
       case POSITION.BOTTOM:
+        insertBottom(node)
+        break
       case POSITION.RIGHT:
-        inserAfter(node)
+        insertAfter(node)
         break
       case POSITION.IN:
         insertInner(node)
@@ -780,7 +796,7 @@ export const copyNode = (id) => {
 
   const { node, parent } = useCanvas().getNodeWithParentById(id)
 
-  inserAfter({ parent, node, data: copyObject(node) })
+  insertAfter({ parent, node, data: copyObject(node) })
   getController().addHistory()
 }
 
