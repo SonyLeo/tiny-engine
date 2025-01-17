@@ -129,7 +129,7 @@ export function setMultiSelectNode(multiSelectedStates, node, append = false) {
   if (append) {
     const nodeIds = new Set(multiSelectedStates.value.map((state) => state.id))
     if (!nodeIds.has(node.id)) {
-      multiSelectedStates.value = [...multiSelectedStates.value, node]
+      multiSelectedStates.value = [...toRaw(multiSelectedStates.value), node]
     }
   } else {
     if (Array.isArray(node)) {
@@ -267,14 +267,20 @@ export const getSelectedState = (element, doc) => {
   const nodeTag = element?.getAttribute(NODE_TAG)
   const nodeId = element?.getAttribute(NODE_UID)
 
-  return {
-    id: nodeId,
-    componentName: nodeTag,
-    doc,
-    top,
-    left,
-    width,
-    height
+  const { node, parent } = useCanvas().getNodeWithParentById(nodeId) || {}
+
+  if (node && parent) {
+    return {
+      id: nodeId,
+      componentName: nodeTag,
+      doc,
+      top,
+      left,
+      width,
+      height,
+      schema: toRaw(node),
+      parent: toRaw(parent)
+    }
   }
 }
 

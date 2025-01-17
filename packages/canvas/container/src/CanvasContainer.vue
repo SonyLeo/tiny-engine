@@ -45,7 +45,7 @@ import { onMounted, ref, computed, onUnmounted, watch, watchEffect } from 'vue'
 import { iframeMonitoring } from '@opentiny/tiny-engine-common/js/monitor'
 import { useTranslate, useCanvas, useMaterial, useMessage, useResource } from '@opentiny/tiny-engine-meta-register'
 import { NODE_UID, NODE_LOOP, DESIGN_MODE } from '../../common'
-import { registerHotkeyEvent, removeHotkeyEvent, isCtrlPressed } from './keyboard'
+import { registerHotkeyEvent, removeHotkeyEvent, isCtrlPressed, multiSelectedStates } from './keyboard'
 import CanvasMenu, { closeMenu, openMenu } from './components/CanvasMenu.vue'
 import CanvasAction from './components/CanvasAction.vue'
 import CanvasResize from './components/CanvasResize.vue'
@@ -92,7 +92,6 @@ export default {
     let target = ref(null)
     const srcAttrName = computed(() => (props.canvasSrc ? 'src' : 'srcdoc'))
 
-    const multiSelectedStates = ref([])
     const selectedNum = computed(() => multiSelectedStates.value.length)
 
     const containerPanel = ref(null)
