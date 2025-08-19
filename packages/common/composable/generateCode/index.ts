@@ -12,6 +12,26 @@ const defaultOptions = {
     formatCode: {
       // 默认格式化配置
       ...defaultPrettierConfig
+    },
+    mcp: {
+      // 默认启用 MCP 功能
+      enabled: true,
+      agentRoot: 'https://agent.opentiny.design/api/v1/mcp-proxy-trial/',
+      sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
+      capabilities: {
+        prompts: { listChanged: true },
+        resources: { subscribe: true, listChanged: true },
+        tools: { listChanged: true },
+        completions: {},
+        logging: {}
+      },
+      tools: {
+        navigation: true,
+        theme: true,
+        user: true,
+        application: true
+      },
+      customTools: []
     }
   }
 }
