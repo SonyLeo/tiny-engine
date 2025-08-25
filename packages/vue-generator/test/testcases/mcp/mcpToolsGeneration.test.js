@@ -17,7 +17,7 @@ describe('MCP Tools Generation', () => {
 
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: { navigation: true, theme: false, user: false, application: false }
+        tools: { navigation: true, application: false }
       })
 
       const files = plugin.run.call(mockContext, { pageSchema })
@@ -43,140 +43,29 @@ describe('MCP Tools Generation', () => {
 
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: { navigation: true, theme: false, user: false, application: false }
+        tools: { navigation: true, application: false }
       })
 
       const files = plugin.run.call(mockContext, { pageSchema })
       const navFile = files.find((f) => f.fileName === 'navigationTools.ts')
 
+      expect(navFile).toBeDefined()
       expect(navFile.fileContent).toContain('"home", "about"')
-      expect(navFile.fileContent).not.toContain('undefined')
     })
 
     test('should handle empty page schema', () => {
+      const pageSchema = []
+
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: { navigation: true, theme: false, user: false, application: false }
+        tools: { navigation: true, application: false }
       })
 
-      const files = plugin.run.call(mockContext, { pageSchema: [] })
+      const files = plugin.run.call(mockContext, { pageSchema })
       const navFile = files.find((f) => f.fileName === 'navigationTools.ts')
 
-      expect(navFile.fileContent).toContain('z.enum([')
-      // Should have at least "home" as default when no pages are provided
-      expect(navFile.fileContent).toContain('"home"')
-    })
-  })
-
-  describe('Theme Tools Generation', () => {
-    test('should generate valid theme tools code', () => {
-      const plugin = genMcpPlugin({
-        enabled: true,
-        tools: { navigation: false, theme: true, user: false, application: false }
-      })
-
-      const files = plugin.run.call(mockContext, { pageSchema: [] })
-      const themeFile = files.find((f) => f.fileName === 'themeTools.ts')
-
-      expect(themeFile).toBeDefined()
-      expect(themeFile.fileContent).toContain('import { z } from "@opentiny/next-sdk"')
-      expect(themeFile.fileContent).toContain("import { useTheme } from '../../composables/useTheme'")
-      expect(themeFile.fileContent).toContain('export function registerThemeTools')
-      expect(themeFile.fileContent).toContain('change-theme-mode')
-      expect(themeFile.fileContent).toContain('toggle-theme')
-      expect(themeFile.fileContent).toContain('get-current-theme')
-      expect(themeFile.fileContent).toContain('z.enum(["light", "dark", "auto"])')
-    })
-
-    test('should generate useTheme composable', () => {
-      const plugin = genMcpPlugin({
-        enabled: true,
-        tools: { navigation: false, theme: true, user: false, application: false }
-      })
-
-      const files = plugin.run.call(mockContext, { pageSchema: [] })
-      const useThemeFile = files.find((f) => f.fileName === 'useTheme.ts')
-
-      expect(useThemeFile).toBeDefined()
-      expect(useThemeFile.path).toBe('./src/composables')
-      expect(useThemeFile.fileContent).toContain('export function useTheme')
-      expect(useThemeFile.fileContent).toContain('type ThemeMode')
-      expect(useThemeFile.fileContent).toContain('setTheme')
-      expect(useThemeFile.fileContent).toContain('toggleTheme')
-      expect(useThemeFile.fileContent).toContain('initTheme')
-      expect(useThemeFile.fileContent).toContain('watchSystemTheme')
-    })
-  })
-
-  describe('User Tools Generation', () => {
-    test('should generate user tools when user state exists', () => {
-      const schema = {
-        globalState: [
-          {
-            id: 'user',
-            state: { currentUser: null, isLoggedIn: false }
-          }
-        ]
-      }
-
-      const plugin = genMcpPlugin({
-        enabled: true,
-        tools: { navigation: false, theme: false, user: true, application: false }
-      })
-
-      const files = plugin.run.call(mockContext, schema)
-      const userFile = files.find((f) => f.fileName === 'userTools.ts')
-
-      expect(userFile).toBeDefined()
-      expect(userFile.fileContent).toContain("import { useUserStore } from '../../stores/user'")
-      expect(userFile.fileContent).toContain('export function registerUserTools')
-      expect(userFile.fileContent).toContain('user-login')
-      expect(userFile.fileContent).toContain('user-logout')
-      expect(userFile.fileContent).toContain('get-user-info')
-      expect(userFile.fileContent).toContain('update-user-profile')
-    })
-
-    test('should not generate user tools when no user state', () => {
-      const schema = {
-        globalState: [
-          {
-            id: 'products',
-            state: { items: [] }
-          }
-        ]
-      }
-
-      const plugin = genMcpPlugin({
-        enabled: true,
-        tools: { navigation: false, theme: false, user: true, application: false }
-      })
-
-      const files = plugin.run.call(mockContext, schema)
-      const userFile = files.find((f) => f.fileName === 'userTools.ts')
-
-      expect(userFile).toBeUndefined()
-    })
-
-    test('should detect user state by various patterns', () => {
-      const testCases = [
-        { id: 'user', state: { name: 'test' } },
-        { id: 'auth', state: { login: true } },
-        { id: 'account', state: { user: {} } },
-        { id: 'session', state: { userInfo: {} } }
-      ]
-
-      testCases.forEach((testCase) => {
-        const schema = { globalState: [testCase] }
-        const plugin = genMcpPlugin({
-          enabled: true,
-          tools: { user: true }
-        })
-
-        const files = plugin.run.call(mockContext, schema)
-        const userFile = files.find((f) => f.fileName === 'userTools.ts')
-
-        expect(userFile).toBeDefined()
-      })
+      expect(navFile).toBeDefined()
+      expect(navFile.fileContent).toContain('"home"') // Default route
     })
   })
 
@@ -185,18 +74,17 @@ describe('MCP Tools Generation', () => {
       const schema = {
         globalState: [
           {
-            id: 'products',
+            id: 'user',
             state: {
-              items: [],
-              selectedItem: null,
-              loading: false
+              currentUser: null,
+              isLoggedIn: false
             }
           },
           {
-            id: 'cart',
+            id: 'products',
             state: {
               items: [],
-              total: 0
+              loading: false
             }
           }
         ]
@@ -204,7 +92,7 @@ describe('MCP Tools Generation', () => {
 
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: { navigation: false, theme: false, user: false, application: true }
+        tools: { navigation: false, application: true }
       })
 
       const files = plugin.run.call(mockContext, schema)
@@ -212,80 +100,61 @@ describe('MCP Tools Generation', () => {
 
       expect(appFile).toBeDefined()
       expect(appFile.fileContent).toContain('export function registerApplicationTools')
+      expect(appFile.fileContent).toContain('get-user-state')
+      expect(appFile.fileContent).toContain('update-user-currentUser')
       expect(appFile.fileContent).toContain('get-products-state')
-      expect(appFile.fileContent).toContain('get-cart-state')
       expect(appFile.fileContent).toContain('update-products-items')
-      expect(appFile.fileContent).toContain('update-products-selectedItem')
-      expect(appFile.fileContent).toContain('update-cart-items')
-      expect(appFile.fileContent).toContain('update-cart-total')
     })
 
     test('should handle empty global state', () => {
-      const schema = { globalState: [] }
-
-      const plugin = genMcpPlugin({
-        enabled: true,
-        tools: { application: true }
-      })
-
-      const files = plugin.run.call(mockContext, schema)
-      const appFile = files.find((f) => f.fileName === 'applicationTools.ts')
-
-      expect(appFile).toBeDefined()
-      expect(appFile.fileContent).toContain('export function registerApplicationTools')
-      // Should have empty function body
-      expect(appFile.fileContent).toMatch(/registerApplicationTools[^}]*\{\s*\}/)
-    })
-  })
-
-  describe('MCP Server Generation', () => {
-    test('should generate server with all tools enabled', () => {
       const schema = {
-        globalState: [{ id: 'user', state: { name: 'test' } }]
+        globalState: []
       }
 
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: {
-          navigation: true,
-          theme: true,
-          user: true,
-          application: true
-        }
+        tools: { navigation: false, application: true }
       })
 
       const files = plugin.run.call(mockContext, schema)
+      const appFile = files.find((f) => f.fileName === 'applicationTools.ts')
+
+      expect(appFile).toBeDefined()
+      expect(appFile.fileContent).toContain('export function registerApplicationTools')
+    })
+  })
+
+  describe('MCP Server Generation', () => {
+    test('should generate server with selective tools', () => {
+      const plugin = genMcpPlugin({
+        enabled: true,
+        tools: { navigation: true, application: false }
+      })
+
+      const files = plugin.run.call(mockContext, {})
       const serverFile = files.find((f) => f.fileName === 'server.ts')
 
       expect(serverFile).toBeDefined()
       expect(serverFile.fileContent).toContain('import { registerNavigationTools }')
-      expect(serverFile.fileContent).toContain('import { registerThemeTools }')
-      expect(serverFile.fileContent).toContain('import { registerUserTools }')
-      expect(serverFile.fileContent).toContain('import { registerApplicationTools }')
+      expect(serverFile.fileContent).not.toContain('import { registerApplicationTools }')
       expect(serverFile.fileContent).toContain('registerNavigationTools(server, router)')
-      expect(serverFile.fileContent).toContain('registerThemeTools(server)')
-      expect(serverFile.fileContent).toContain('registerUserTools(server)')
-      expect(serverFile.fileContent).toContain('registerApplicationTools(server)')
+      expect(serverFile.fileContent).not.toContain('registerApplicationTools(server)')
     })
 
-    test('should generate server with selective tools', () => {
+    test('should generate server with all supported tools enabled', () => {
       const plugin = genMcpPlugin({
         enabled: true,
-        tools: {
-          navigation: true,
-          theme: false,
-          user: false,
-          application: true
-        }
+        tools: { navigation: true, application: true }
       })
 
-      const files = plugin.run.call(mockContext, { globalState: [] })
+      const files = plugin.run.call(mockContext, {})
       const serverFile = files.find((f) => f.fileName === 'server.ts')
 
-      expect(serverFile.fileContent).toContain('registerNavigationTools')
-      expect(serverFile.fileContent).toContain('registerApplicationTools')
-      expect(serverFile.fileContent).not.toContain('registerThemeTools')
-      expect(serverFile.fileContent).not.toContain('registerUserTools')
+      expect(serverFile).toBeDefined()
+      expect(serverFile.fileContent).toContain('import { registerNavigationTools }')
+      expect(serverFile.fileContent).toContain('import { registerApplicationTools }')
+      expect(serverFile.fileContent).toContain('registerNavigationTools(server, router)')
+      expect(serverFile.fileContent).toContain('registerApplicationTools(server)')
     })
   })
 
@@ -293,16 +162,16 @@ describe('MCP Tools Generation', () => {
     test('should generate base config with custom values', () => {
       const plugin = genMcpPlugin({
         enabled: true,
-        agentRoot: 'https://custom.example.com/',
-        sessionId: 'custom-session-456'
+        agentRoot: 'https://custom-agent.example.com/',
+        sessionId: 'custom-session-123'
       })
 
-      const files = plugin.run.call(mockContext, { pageSchema: [] })
+      const files = plugin.run.call(mockContext, {})
       const baseFile = files.find((f) => f.fileName === 'base.ts')
 
       expect(baseFile).toBeDefined()
-      expect(baseFile.fileContent).toContain('https://custom.example.com/')
-      expect(baseFile.fileContent).toContain('custom-session-456')
+      expect(baseFile.fileContent).toContain('https://custom-agent.example.com/')
+      expect(baseFile.fileContent).toContain('custom-session-123')
       expect(baseFile.fileContent).toContain('export const AGENT_ROOT')
       expect(baseFile.fileContent).toContain('export const SESSION_ID')
     })

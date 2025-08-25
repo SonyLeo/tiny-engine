@@ -13,8 +13,6 @@ const defaultOption = {
   },
   tools: {
     navigation: true,
-    theme: true,
-    user: true,
     application: true
   },
   customTools: []
@@ -140,274 +138,6 @@ export function registerNavigationTools(server: WebMcpServer, router: Router) {
 }
 
 /**
- * 生成主题工具代码
- * @returns {string} 主题工具代码
- */
-function generateThemeTools() {
-  return `import { z } from "@opentiny/next-sdk"
-import type { WebMcpServer } from "@opentiny/next-sdk"
-import { useTheme } from '../../composables/useTheme'
-
-export function registerThemeTools(server: WebMcpServer) {
-  const { setTheme, toggleTheme, themeMode, isDark } = useTheme()
-
-  server.registerTool(
-    "change-theme-mode",
-    {
-      title: "切换主题模式",
-      description: "切换应用的主题模式（浅色/深色/自动）",
-      inputSchema: {
-        mode: z.enum(["light", "dark", "auto"]).describe("主题模式"),
-      },
-    },
-    async ({ mode }: { mode: "light" | "dark" | "auto" }) => {
-      try {
-        setTheme(mode)
-        localStorage.setItem('theme', mode)
-        
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`主题已切换为\${mode === 'light' ? '浅色' : mode === 'dark' ? '深色' : '自动'}模式\` 
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`主题切换失败：\${error}\` 
-          }],
-        }
-      }
-    }
-  )
-
-  server.registerTool(
-    "toggle-theme",
-    {
-      title: "切换主题",
-      description: "在浅色和深色主题之间切换",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        toggleTheme()
-        const currentMode = themeMode.value
-        localStorage.setItem('theme', currentMode)
-        
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`主题已切换为\${currentMode === 'light' ? '浅色' : '深色'}模式\` 
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`主题切换失败：\${error}\` 
-          }],
-        }
-      }
-    }
-  )
-
-  server.registerTool(
-    "get-current-theme",
-    {
-      title: "获取当前主题",
-      description: "获取当前应用的主题模式",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`当前主题模式：\${themeMode.value}，实际显示：\${isDark.value ? '深色' : '浅色'}\` 
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{ 
-            type: "text", 
-            text: \`获取主题信息失败：\${error}\` 
-          }],
-        }
-      }
-    }
-  )
-}`
-}
-
-/**
- * 生成用户工具代码
- * @param {boolean} hasUserState 是否存在用户状态
- * @returns {string} 用户工具代码
- */
-function generateUserTools(hasUserState) {
-  if (!hasUserState) {
-    return ''
-  }
-
-  return `import { z } from "@opentiny/next-sdk"
-import type { WebMcpServer } from "@opentiny/next-sdk"
-import { useUserStore } from '../../stores/user'
-
-export function registerUserTools(server: WebMcpServer) {
-  const { currentUser, isLoggedIn, login, logout, updateProfile } = useUserStore()
-
-  server.registerTool(
-    "user-login",
-    {
-      title: "用户登录",
-      description: "使用邮箱和密码登录系统",
-      inputSchema: {
-        email: z.string().describe("用户邮箱"),
-        password: z.string().describe("用户密码"),
-      },
-    },
-    async ({ email, password }: { email: string; password: string }) => {
-      try {
-        const success = await login(email, password)
-        if (success) {
-          return {
-            navigateTo: "/hello",
-            content: [{
-              type: "text",
-              text: \`登录成功！欢迎 \${currentUser.value?.name}\`
-            }],
-          }
-        } else {
-          return {
-            content: [{
-              type: "text",
-              text: "登录失败，请检查邮箱和密码"
-            }],
-          }
-        }
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: \`登录出错：\${error}\`
-          }],
-        }
-      }
-    }
-  )
-
-  server.registerTool(
-    "user-logout",
-    {
-      title: "用户登出",
-      description: "退出当前用户登录状态",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        const userName = currentUser.value?.name || "用户"
-        logout()
-        return {
-          content: [{
-            type: "text",
-            text: \`\${userName} 已成功登出\`
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: \`登出失败：\${error}\`
-          }],
-        }
-      }
-    }
-  )
-
-  server.registerTool(
-    "get-user-info",
-    {
-      title: "获取用户信息",
-      description: "获取当前登录用户的信息",
-      inputSchema: {},
-    },
-    async () => {
-      try {
-        if (!isLoggedIn.value) {
-          return {
-            content: [{
-              type: "text",
-              text: "用户未登录"
-            }],
-          }
-        }
-
-        const user = currentUser.value!
-        return {
-          content: [{
-            type: "text",
-            text: \`用户信息：\\n姓名：\${user.name}\\n邮箱：\${user.email}\\n角色：\${user.role === 'admin' ? '管理员' : '普通用户'}\`
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: \`获取用户信息失败：\${error}\`
-          }],
-        }
-      }
-    }
-  )
-
-  server.registerTool(
-    "update-user-profile",
-    {
-      title: "更新用户资料",
-      description: "更新当前用户的个人资料",
-      inputSchema: {
-        name: z.string().optional().describe("用户姓名"),
-        email: z.string().optional().describe("用户邮箱"),
-      },
-    },
-    async ({ name, email }: { name?: string; email?: string }) => {
-      try {
-        if (!isLoggedIn.value) {
-          return {
-            content: [{
-              type: "text",
-              text: "请先登录"
-            }],
-          }
-        }
-
-        const updates: any = {}
-        if (name) updates.name = name
-        if (email) updates.email = email
-
-        updateProfile(updates)
-
-        return {
-          content: [{
-            type: "text",
-            text: "用户资料更新成功"
-          }],
-        }
-      } catch (error) {
-        return {
-          content: [{
-            type: "text",
-            text: \`用户资料更新失败：\${error}\`
-          }],
-        }
-      }
-    }
-  )
-}`
-}
-
-/**
  * 生成应用程序特定工具代码
  * @param {Object} schema 应用程序模式
  * @returns {string} 应用程序工具代码
@@ -509,87 +239,11 @@ export function registerApplicationTools(server: WebMcpServer) {`
 }
 
 /**
- * 生成 useTheme 组合式函数
- * @returns {string} useTheme 代码
- */
-function generateUseTheme() {
-  return `import { ref, computed, watch } from 'vue'
-
-export type ThemeMode = 'light' | 'dark' | 'auto'
-
-const themeMode = ref<ThemeMode>('auto')
-const systemPrefersDark = ref(false)
-
-export function useTheme() {
-  const isDark = computed(() => {
-    if (themeMode.value === 'auto') {
-      return systemPrefersDark.value
-    }
-    return themeMode.value === 'dark'
-  })
-
-  const setTheme = (mode: ThemeMode) => {
-    themeMode.value = mode
-    updateThemeClass()
-  }
-
-  const toggleTheme = () => {
-    if (themeMode.value === 'auto') {
-      setTheme(systemPrefersDark.value ? 'light' : 'dark')
-    } else {
-      setTheme(themeMode.value === 'light' ? 'dark' : 'light')
-    }
-  }
-
-  const updateThemeClass = () => {
-    const html = document.documentElement
-    if (isDark.value) {
-      html.classList.add('dark')
-    } else {
-      html.classList.remove('dark')
-    }
-  }
-
-  const initTheme = () => {
-    const savedTheme = localStorage.getItem('theme') as ThemeMode
-    if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
-      themeMode.value = savedTheme
-    }
-    updateThemeClass()
-  }
-
-  const watchSystemTheme = () => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    systemPrefersDark.value = mediaQuery.matches
-    
-    mediaQuery.addEventListener('change', (e) => {
-      systemPrefersDark.value = e.matches
-      if (themeMode.value === 'auto') {
-        updateThemeClass()
-      }
-    })
-  }
-
-  watch(isDark, updateThemeClass)
-
-  return {
-    themeMode: computed(() => themeMode.value),
-    isDark,
-    setTheme,
-    toggleTheme,
-    initTheme,
-    watchSystemTheme
-  }
-}`
-}
-
-/**
  * 生成 MCP 服务器文件
  * @param {Array} enabledTools 启用的工具类别
- * @param {boolean} hasUserState 是否存在用户状态
  * @returns {string} MCP 服务器代码
  */
-function generateMcpServer(enabledTools, hasUserState) {
+function generateMcpServer(enabledTools) {
   let imports = `import { WebMcpServer } from "@opentiny/next-sdk"
 import type { Router } from 'vue-router'`
 
@@ -600,20 +254,6 @@ import type { Router } from 'vue-router'`
 import { registerNavigationTools } from './tools/navigationTools'`
     registrations += `
   registerNavigationTools(server, router)`
-  }
-
-  if (enabledTools.includes('theme')) {
-    imports += `
-import { registerThemeTools } from './tools/themeTools'`
-    registrations += `
-  registerThemeTools(server)`
-  }
-
-  if (enabledTools.includes('user') && hasUserState) {
-    imports += `
-import { registerUserTools } from './tools/userTools'`
-    registrations += `
-  registerUserTools(server)`
   }
 
   if (enabledTools.includes('application')) {
@@ -645,65 +285,6 @@ export function createMcpServer(router: Router, mcpServerConfig: any) {
 function generateBaseConfig(config) {
   return `export const AGENT_ROOT = '${config.agentRoot}'
 export const SESSION_ID = '${config.sessionId}'`
-}
-
-/**
- * 生成 TypeScript 配置文件
- * @returns {string} TypeScript 配置 JSON
- */
-function generateTsConfig() {
-  const tsConfig = {
-    compilerOptions: {
-      target: 'ES2020',
-      useDefineForClassFields: true,
-      lib: ['ES2020', 'DOM', 'DOM.Iterable'],
-      module: 'ESNext',
-      skipLibCheck: true,
-
-      /* Bundler mode */
-      moduleResolution: 'bundler',
-      allowImportingTsExtensions: true,
-      resolveJsonModule: true,
-      isolatedModules: true,
-      noEmit: true,
-      jsx: 'preserve',
-
-      /* Linting */
-      strict: true,
-      noUnusedLocals: true,
-      noUnusedParameters: true,
-      noFallthroughCasesInSwitch: true,
-
-      /* Path mapping */
-      baseUrl: '.',
-      paths: {
-        '@/*': ['src/*']
-      }
-    },
-    include: ['src/**/*.ts', 'src/**/*.tsx', 'src/**/*.vue'],
-    references: [{ path: './tsconfig.node.json' }]
-  }
-
-  return JSON.stringify(tsConfig, null, 2)
-}
-
-/**
- * 生成 TypeScript Node 配置文件
- * @returns {string} TypeScript Node 配置 JSON
- */
-function generateTsConfigNode() {
-  const tsConfigNode = {
-    compilerOptions: {
-      composite: true,
-      skipLibCheck: true,
-      module: 'ESNext',
-      moduleResolution: 'bundler',
-      allowSyntheticDefaultImports: true
-    },
-    include: ['vite.config.ts']
-  }
-
-  return JSON.stringify(tsConfigNode, null, 2)
 }
 
 /**
@@ -829,7 +410,49 @@ onMounted(() => {
 });
 </script>`
 
-    return originalContent.replace(/<template>/, `${mcpScript}\n\n<template>`)
+    let modifiedContent = originalContent.replace(/<template>/, `${mcpScript}\n\n<template>`)
+
+    // 在模板中添加 TinyRemoter 组件
+    if (!modifiedContent.includes('TinyRemoter')) {
+      // 查找 </template> 标签前添加 TinyRemoter
+      modifiedContent = modifiedContent.replace(
+        '</template>',
+        `    <TinyRemoter :sessionId="SESSION_ID" class="remoter" />\n  </template>`
+      )
+
+      // 添加 TinyRemoter 的样式
+      const remoterStyles = `
+.remoter {
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  width: 50px;
+  height: 50px;
+  z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .remoter {
+    right: 1rem;
+    bottom: 1rem;
+    width: 40px;
+    height: 40px;
+  }
+}
+
+:deep(.next-sdk-trigger-btn) {
+  font-size: 30px;
+}`
+
+      // 添加样式到现有的 style 标签中，或创建新的 style 标签
+      if (modifiedContent.includes('<style')) {
+        modifiedContent = modifiedContent.replace(/<\/style>/, `${remoterStyles}\n</style>`)
+      } else {
+        modifiedContent += `\n\n<style scoped>${remoterStyles}\n</style>`
+      }
+    }
+
+    return modifiedContent
   }
 
   // 如果存在 script setup，则修改它
@@ -953,8 +576,8 @@ onMounted(() => {
     `<script setup lang="ts">\n${newScript}\n</script>`
   )
 
-  // 在模板中添加 TinyRemoter 组件
-  if (!modifiedContent.includes('TinyRemoter')) {
+  // 在模板中添加 TinyRemoter 组件（检查模板部分是否已包含）
+  if (!modifiedContent.includes('<TinyRemoter')) {
     // 查找 </template> 标签前添加 TinyRemoter
     modifiedContent = modifiedContent.replace(
       '</template>',
@@ -1031,7 +654,7 @@ function validateMcpConfig(config) {
   if (config.tools && typeof config.tools !== 'object') {
     errors.push('tools 必须是对象')
   } else if (config.tools) {
-    const validTools = ['navigation', 'theme', 'user', 'application']
+    const validTools = ['navigation', 'application']
     Object.keys(config.tools).forEach((tool) => {
       if (!validTools.includes(tool)) {
         warnings.push(`未知的工具类型: ${tool}`)
@@ -1075,6 +698,14 @@ function genMcpPlugin(options = {}) {
     throw new Error(`MCP 插件配置无效: ${validation.errors.join(', ')}`)
   }
 
+  // 输出警告
+  if (validation.warnings.length > 0) {
+    validation.warnings.forEach((warning) => {
+      // eslint-disable-next-line no-console
+      console.warn('MCP 插件配置警告:', warning)
+    })
+  }
+
   const realOptions = mergeOptions(defaultOption, options)
 
   return {
@@ -1094,21 +725,6 @@ function genMcpPlugin(options = {}) {
         const files = []
         const { tools } = realOptions
 
-        // 检查是否存在用户状态
-        const hasUserState =
-          schema.globalState &&
-          schema.globalState.some(
-            (state) =>
-              state.id &&
-              (state.id.toLowerCase().includes('user') ||
-                Object.keys(state.state || {}).some(
-                  (key) =>
-                    key.toLowerCase().includes('user') ||
-                    key.toLowerCase().includes('login') ||
-                    key.toLowerCase().includes('auth')
-                ))
-          )
-
         // 确定启用的工具类别
         const enabledTools = Object.keys(tools).filter((tool) => tools[tool])
 
@@ -1120,29 +736,12 @@ function genMcpPlugin(options = {}) {
           fileContent: generateBaseConfig(realOptions)
         })
 
-        // 生成或更新 TypeScript 配置文件
-        const tsConfig = generateTsConfig()
-        files.push({
-          fileType: 'json',
-          fileName: 'tsconfig.json',
-          path: '.',
-          fileContent: tsConfig
-        })
-
-        const tsConfigNode = generateTsConfigNode()
-        files.push({
-          fileType: 'json',
-          fileName: 'tsconfig.node.json',
-          path: '.',
-          fileContent: tsConfigNode
-        })
-
         // 生成 MCP 服务器文件
         files.push({
           fileType: 'ts',
           fileName: 'server.ts',
           path: './src/mcp',
-          fileContent: generateMcpServer(enabledTools, hasUserState)
+          fileContent: generateMcpServer(enabledTools)
         })
 
         // 生成工具文件
@@ -1159,52 +758,6 @@ function genMcpPlugin(options = {}) {
               this.addLog({
                 type: 'warning',
                 message: `导航工具生成失败: ${error.message}`,
-                plugin: 'genMcpPlugin'
-              })
-            }
-          }
-        }
-
-        if (tools.theme) {
-          try {
-            files.push({
-              fileType: 'ts',
-              fileName: 'themeTools.ts',
-              path: './src/mcp/tools',
-              fileContent: generateThemeTools()
-            })
-
-            // 生成 useTheme 组合式函数（如果不存在）
-            files.push({
-              fileType: 'ts',
-              fileName: 'useTheme.ts',
-              path: './src/composables',
-              fileContent: generateUseTheme()
-            })
-          } catch (error) {
-            if (this.addLog) {
-              this.addLog({
-                type: 'warning',
-                message: `主题工具生成失败: ${error.message}`,
-                plugin: 'genMcpPlugin'
-              })
-            }
-          }
-        }
-
-        if (tools.user && hasUserState) {
-          try {
-            files.push({
-              fileType: 'ts',
-              fileName: 'userTools.ts',
-              path: './src/mcp/tools',
-              fileContent: generateUserTools(hasUserState)
-            })
-          } catch (error) {
-            if (this.addLog) {
-              this.addLog({
-                type: 'warning',
-                message: `用户工具生成失败: ${error.message}`,
                 plugin: 'genMcpPlugin'
               })
             }
@@ -1257,6 +810,9 @@ function genMcpPlugin(options = {}) {
         return files
       } catch (error) {
         // 记录错误但不中断整个生成过程
+        // eslint-disable-next-line no-console
+        console.error('MCP 插件生成失败:', error)
+
         // 添加错误日志到上下文
         if (this.addLog) {
           this.addLog({

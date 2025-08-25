@@ -2,7 +2,14 @@
 
 ## 概述
 
-本文档描述了 MCP (Model Context Protocol) 应用生成功能的完整测试流程，包括测试用例设计、预期结果验证和问题排查指南。
+本文档描述了 MCP (Model Context Protocol) 应用生成功能的完整测试流程，包括测试用例设计、预期结果验证和问题排查指南。MCP 功能支持生成导航工具和应用程序状态管理工具，为 Vue 应用提供智能代理交互能力。
+
+## 更新日志
+
+- **2024-08-25**: 修复 App.vue 中 TinyRemoter 组件未在模板中使用的问题
+- **2024-08-25**: 移除不支持的功能（主题工具、用户工具、TypeScript配置生成）
+- **2024-08-25**: 更新测试用例以匹配实际插件功能
+- **2024-08-25**: 添加 expected 和 result 代码示例
 
 ## 测试架构
 
@@ -10,27 +17,24 @@
 ```
 test/testcases/mcp/
 ├── mockData.js                    # 测试数据模拟
-├── mcpIntegration.test.js         # 基础集成测试
 ├── mcpFullIntegration.test.js     # 完整集成测试
 ├── mcpToolsGeneration.test.js     # 工具生成测试
 ├── genMcpPlugin.test.js          # 插件单元测试
+├── generateResults.test.js        # 结果生成测试
 ├── expected/                      # 预期结果文件
-│   └── mcp-full-app/
-│       ├── src/
-│       │   ├── base.ts
-│       │   ├── mcp/
-│       │   │   ├── server.ts
-│       │   │   └── tools/
-│       │   │       ├── navigationTools.ts
-│       │   │       ├── themeTools.ts
-│       │   │       ├── userTools.ts
-│       │   │       └── applicationTools.ts
-│       │   └── composables/
-│       │       └── useTheme.ts
-│       ├── package.json
-│       └── tsconfig.json
+│   ├── base.ts                   # MCP 基础配置
+│   ├── server.ts                 # MCP 服务器
+│   ├── navigationTools.ts        # 导航工具
+│   ├── applicationTools.ts       # 应用程序工具
+│   ├── App.vue                   # 修改后的 App.vue
+│   └── main.ts                   # 修改后的 main.ts
 └── result/                        # 测试生成结果
-    └── mcp-full-app/
+    ├── base.ts
+    ├── server.ts
+    ├── navigationTools.ts
+    ├── applicationTools.ts
+    ├── App.vue
+    └── main.ts
 ```
 
 ## 测试数据设计

@@ -27,8 +27,6 @@ const defaultOptions = {
       },
       tools: {
         navigation: true,
-        theme: true,
-        user: true,
         application: true
       },
       customTools: []
