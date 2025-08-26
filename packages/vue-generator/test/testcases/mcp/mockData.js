@@ -361,7 +361,7 @@ export const mcpAppSchemaMinimal = {
 // MCP 配置选项
 export const mcpConfigFull = {
   enabled: true,
-  agentRoot: 'https://agent.opentiny.design/api/v1/mcp-proxy-trial/',
+  agentRoot: 'https://agent.opentiny.design/api/v1/webmcp-trial/',
   sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
   capabilities: {
     prompts: { listChanged: true },

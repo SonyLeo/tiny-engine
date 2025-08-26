@@ -62,7 +62,7 @@ const instance = generateApp({
 | 选项 | 类型 | 默认值 | 描述 |
 |------|------|--------|------|
 | `enabled` | boolean | `true` | 是否启用 MCP 集成 |
-| `agentRoot` | string | `'https://agent.opentiny.design/api/v1/mcp-proxy-trial/'` | MCP 代理服务器根 URL |
+| `agentRoot` | string | `'https://agent.opentiny.design/api/v1/webmcp-trial/'` | MCP 代理服务器根 URL |
 | `sessionId` | string | `'78b66563-95c0-4839-8007-e8af634dd658'` | MCP 会话 ID |
 
 ### 工具配置

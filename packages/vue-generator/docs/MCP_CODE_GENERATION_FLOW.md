@@ -86,7 +86,7 @@ codeGenerator.generate(schema)
 
 1. **基础配置文件** (`src/base.ts`)
    ```typescript
-   export const AGENT_ROOT = 'https://agent.opentiny.design/api/v1/mcp-proxy-trial/'
+   export const AGENT_ROOT = 'https://agent.opentiny.design/api/v1/webmcp-trial/'
    export const SESSION_ID = '78b66563-95c0-4839-8007-e8af634dd658'
    ```
 

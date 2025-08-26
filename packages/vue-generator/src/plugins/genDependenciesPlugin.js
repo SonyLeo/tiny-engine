@@ -58,9 +58,9 @@ const parseSchema = (schema, mcpConfig) => {
 
   // 添加 MCP 相关依赖
   if (mcpConfig && mcpConfig.enabled) {
-    resDeps['@opentiny/next-remoter'] = '0.0.1-alpha.9'
+    resDeps['@opentiny/next-remoter'] = '^0.0.1-alpha.10'
     resDeps['@opentiny/next-sdk'] = '^0.1.0'
-    resDeps['@opentiny/tiny-robot'] = '0.3.0-alpha.16'
+    resDeps['@opentiny/tiny-robot'] = '^0.3.0-alpha.16'
   }
 
   return resDeps

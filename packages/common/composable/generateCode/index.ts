@@ -16,7 +16,7 @@ const defaultOptions = {
     mcp: {
       // 默认启用 MCP 功能
       enabled: true,
-      agentRoot: 'https://agent.opentiny.design/api/v1/mcp-proxy-trial/',
+      agentRoot: 'https://agent.opentiny.design/api/v1/webmcp-trial/',
       sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
       capabilities: {
         prompts: { listChanged: true },

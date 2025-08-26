@@ -71,7 +71,7 @@ test/testcases/mcp/
 ```javascript
 {
   enabled: true,
-  agentRoot: 'https://agent.opentiny.design/api/v1/mcp-proxy-trial/',
+  agentRoot: 'https://agent.opentiny.design/api/v1/webmcp-trial/',
   sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
   capabilities: { /* 完整能力配置 */ },
   tools: {
