@@ -494,6 +494,7 @@ function modifyMainTs(originalContent) {
 
   // 插入 MCP 样式导入
   lines.splice(insertIndex, 0, "import '@opentiny/tiny-robot/dist/style.css'")
+  lines.splice(insertIndex + 1, 0, "import '@opentiny/next-remoter/dist/style.css'")
 
   return lines.join('\n')
 }
@@ -608,24 +609,6 @@ onMounted(() => {
 
       // 添加 TinyRemoter 的样式
       const remoterStyles = `
-.remoter {
-  position: fixed;
-  right: 2rem;
-  bottom: 2rem;
-  width: 50px;
-  height: 50px;
-  z-index: 1000;
-}
-
-@media (max-width: 768px) {
-  .remoter {
-    right: 1rem;
-    bottom: 1rem;
-    width: 40px;
-    height: 40px;
-  }
-}
-
 :deep(.next-sdk-trigger-btn) {
   font-size: 30px;
 }`
@@ -652,7 +635,7 @@ import {
 } from "@opentiny/next-sdk";
 import type { Transport } from "@opentiny/next-sdk";
 import { AGENT_ROOT, SESSION_ID } from "./base";
-import { createMcpServer } from "./mcp/server";`
+import { mcpServerManager } from "./mcp/server";`
 
   // 添加 MCP 相关代码
   const mcpCode = `
@@ -702,14 +685,16 @@ const createProxyTransport = async () => {
   window.addEventListener("pagehide", client.onPagehide);
 };
 
-// 初始化MCP服务器
+// 初始化MCP服务器管理器
 const initMcpServer = async () => {
   try {
-    const server = createMcpServer(router, mcpServer);
-    await server.connect(mcpServer.transport as Transport);
-    console.log('MCP 服务器初始化成功');
+    // 初始化管理器
+    mcpServerManager.init(router, mcpServer);
+    // 连接所有服务器
+    await mcpServerManager.connectAll(mcpServer.transport as Transport);
+    console.log('MCP 服务器管理器初始化成功');
   } catch (error) {
-    console.error('MCP 服务器初始化失败:', error);
+    console.error('MCP 服务器管理器初始化失败:', error);
   }
 };`
 
@@ -772,24 +757,6 @@ onMounted(() => {
 
     // 添加 TinyRemoter 的样式
     const remoterStyles = `
-.remoter {
-  position: fixed;
-  right: 2rem;
-  bottom: 2rem;
-  width: 50px;
-  height: 50px;
-  z-index: 1000;
-}
-
-@media (max-width: 768px) {
-  .remoter {
-    right: 1rem;
-    bottom: 1rem;
-    width: 40px;
-    height: 40px;
-  }
-}
-
 :deep(.next-sdk-trigger-btn) {
   font-size: 30px;
 }`
