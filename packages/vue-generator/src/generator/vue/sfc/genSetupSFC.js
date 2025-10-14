@@ -228,7 +228,7 @@ export const genSFCWithDefaultPlugin = (schema, componentsMap, config = {}, next
     handleSlotBindAttrHook,
     handleAttrKeyHook,
     handlePrimitiveAttributeHook,
-    handleTinyMcpConfigAttrHook, // 移到 handleExpressionAttrHook 之前
+    handleTinyMcpConfigAttrHook,
     handleExpressionAttrHook,
     handleJSFunctionAttrHook,
     handleI18nAttrHook,

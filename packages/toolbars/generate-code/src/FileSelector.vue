@@ -27,23 +27,15 @@
       </tiny-grid>
     </div>
     <template #footer>
-      <div class="footer-container">
-        <div class="autopilot-container">
-          <span>启用自动驾驶模式</span>
-          <tiny-switch v-model="isAutopilotEnabled" />
-        </div>
-        <div class="button-container">
-          <tiny-button type="primary" @click="confirm">确定</tiny-button>
-          <tiny-button @click="$emit('cancel')">取消</tiny-button>
-        </div>
-      </div>
+      <tiny-button type="primary" @click="confirm">确定</tiny-button>
+      <tiny-button @click="$emit('cancel')">取消</tiny-button>
     </template>
   </tiny-dialog-box>
 </template>
 
 <script lang="ts">
 /* metaService: engine.toolbars.generate-code.FileSelector */
-import { DialogBox, Button, Grid, GridColumn, Switch } from '@opentiny/vue'
+import { DialogBox, Button, Grid, GridColumn } from '@opentiny/vue'
 import { reactive, computed, ref, nextTick } from 'vue'
 import { useNotify } from '@opentiny/tiny-engine-meta-register'
 
@@ -52,8 +44,7 @@ export default {
     TinyDialogBox: DialogBox,
     TinyButton: Button,
     TinyGrid: Grid,
-    TinyGridColumn: GridColumn,
-    TinySwitch: Switch
+    TinyGridColumn: GridColumn
   },
   props: {
     visible: { type: Boolean, default: false },
@@ -95,7 +86,6 @@ export default {
     const gridRef = ref<any>(null)
 
     const state = reactive({})
-    const isAutopilotEnabled = ref(false)
 
     const confirm = () => {
       const selectedData = gridRef.value.getSelectRecords().filter((item: { children: any }) => !item.children)
@@ -122,7 +112,6 @@ export default {
       state,
       tableData,
       gridRef,
-      isAutopilotEnabled,
       confirm,
       openDialog
     }
@@ -222,25 +211,6 @@ export default {
       .tiny-grid__empty-text {
         color: var(--te-toolbars-generate-code-text-color);
       }
-    }
-  }
-
-  .footer-container {
-    width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    .autopilot-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .button-container {
-      display: flex;
-      align-items: center;
-      gap: 12px;
     }
   }
 }
