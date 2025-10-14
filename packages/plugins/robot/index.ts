@@ -10,12 +10,14 @@
  *
  */
 
-import RobotIcon from './src/Main.vue'
+import entry from './src/Main.vue'
 import metaData from './meta'
 import './src/styles/vars.less'
 import '@opentiny/tiny-robot/dist/style.css'
+import { RobotService } from './src/js/index'
 
 export default {
   ...metaData,
-  icon: RobotIcon
+  entry,
+  metas: [RobotService]
 }
