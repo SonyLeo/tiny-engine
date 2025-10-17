@@ -2,7 +2,7 @@ import { mergeOptions } from '../utils/mergeOptions'
 import { INSERT_POSITION, JS_EXPRESSION } from '../constant'
 
 const defaultOption = {
-  enabled: true,
+  enabled: false, // 默认禁用 MCP，用户需要显式启用
   agentRoot: 'https://agent.opentiny.design/api/v1/webmcp-trial/',
   sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
   capabilities: {
@@ -952,6 +952,7 @@ function genMcpPlugin(options = {}) {
      * @returns
      */
     run(schema) {
+      // 如果 MCP 未启用，直接返回空数组，不生成任何文件
       if (!realOptions.enabled) {
         return []
       }
@@ -1036,28 +1037,31 @@ function genMcpPlugin(options = {}) {
           })
         }
 
-        // 修改 App.vue 文件
-        const existingAppVue = this.getFile('./src', 'App.vue')
-        if (existingAppVue) {
-          const modifiedAppVue = modifyAppVue(existingAppVue.fileContent, realOptions)
-          this.replaceFile({
-            fileType: 'vue',
-            fileName: 'App.vue',
-            path: './src',
-            fileContent: modifiedAppVue
-          })
-        }
+        // 只有在 MCP 启用时才修改 App.vue 和 main.ts 文件
+        if (realOptions.enabled) {
+          // 修改 App.vue 文件
+          const existingAppVue = this.getFile('./src', 'App.vue')
+          if (existingAppVue) {
+            const modifiedAppVue = modifyAppVue(existingAppVue.fileContent, realOptions)
+            this.replaceFile({
+              fileType: 'vue',
+              fileName: 'App.vue',
+              path: './src',
+              fileContent: modifiedAppVue
+            })
+          }
 
-        // 修改 main.ts 文件以包含 MCP 样式
-        const existingMainTs = this.getFile('./src', 'main.ts') || this.getFile('./src', 'main.js')
-        if (existingMainTs && existingMainTs.fileName) {
-          const modifiedMainTs = modifyMainTs(existingMainTs.fileContent)
-          this.replaceFile({
-            fileType: existingMainTs.fileName.endsWith('.ts') ? 'ts' : 'js',
-            fileName: existingMainTs.fileName,
-            path: './src',
-            fileContent: modifiedMainTs
-          })
+          // 修改 main.ts 文件以包含 MCP 样式
+          const existingMainTs = this.getFile('./src', 'main.ts') || this.getFile('./src', 'main.js')
+          if (existingMainTs && existingMainTs.fileName) {
+            const modifiedMainTs = modifyMainTs(existingMainTs.fileContent)
+            this.replaceFile({
+              fileType: existingMainTs.fileName.endsWith('.ts') ? 'ts' : 'js',
+              fileName: existingMainTs.fileName,
+              path: './src',
+              fileContent: modifiedMainTs
+            })
+          }
         }
 
         // 如果检测到页面使用了 tiny_mcp_config，添加日志信息

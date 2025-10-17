@@ -220,6 +220,9 @@ export const genSFCWithDefaultPlugin = (schema, componentsMap, config = {}, next
   const { templateItemValidate = [], genTemplate = [], parseScript = [], genScript = {} } = config.hooks || {}
   const defaultComponentHooks = [handleComponentNameHook, handleTinyIcon, handleTinyGrid]
 
+  // 根据 MCP 配置决定是否包含 MCP 钩子
+  const mcpEnabled = config.mcpEnabled !== false // 默认为 true 以保持向后兼容
+
   const defaultAttributeHook = [
     handleSlotParams,
     handleJsxModelValueUpdate,
@@ -228,7 +231,7 @@ export const genSFCWithDefaultPlugin = (schema, componentsMap, config = {}, next
     handleSlotBindAttrHook,
     handleAttrKeyHook,
     handlePrimitiveAttributeHook,
-    handleTinyMcpConfigAttrHook,
+    ...(mcpEnabled ? [handleTinyMcpConfigAttrHook] : []), // 仅在 MCP 启用时添加
     handleExpressionAttrHook,
     handleJSFunctionAttrHook,
     handleI18nAttrHook,

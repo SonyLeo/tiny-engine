@@ -20,8 +20,8 @@ const defaultOptions = {
       ...defaultPrettierConfig
     },
     mcp: {
-      // 默认启用 MCP 功能
-      enabled: true,
+      // 默认禁用 MCP 功能，用户需要显式启用
+      enabled: false,
       agentRoot: 'https://agent.opentiny.design/api/v1/webmcp-trial/',
       sessionId: '78b66563-95c0-4839-8007-e8af634dd658',
       capabilities: {
