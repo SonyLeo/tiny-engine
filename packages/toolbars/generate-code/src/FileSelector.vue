@@ -9,6 +9,11 @@
     @close="$emit('cancel')"
     @open="initdialogBox"
   >
+    <div class="mcp-switch-container">
+      <span class="mcp-switch-label">启用 MCP 集成：</span>
+      <tiny-switch v-model="mcpEnabled" @change="handleMcpChange"></tiny-switch>
+      <span class="mcp-switch-tip">（开启后将生成 MCP 相关配置和工具代码）</span>
+    </div>
     <div class="dialog-grid">
       <div class="tree-wrap">
         <tiny-tree
@@ -43,9 +48,9 @@
 
 <script lang="ts">
 /* metaService: engine.toolbars.generate-code.FileSelector */
-import { DialogBox, Button, Tree } from '@opentiny/vue'
+import { DialogBox, Button, Tree, Switch } from '@opentiny/vue'
 import { iconPutAway, iconExpand } from '@opentiny/vue-icon'
-import { reactive, computed, ref, nextTick } from 'vue'
+import { computed, ref, nextTick, watch, reactive } from 'vue'
 import { useNotify, useCanvas } from '@opentiny/tiny-engine-meta-register'
 import { VueMonaco } from '@opentiny/tiny-engine-common'
 
@@ -54,7 +59,8 @@ export default {
     MonacoEditor: VueMonaco,
     TinyDialogBox: DialogBox,
     TinyButton: Button,
-    TinyTree: Tree
+    TinyTree: Tree,
+    TinySwitch: Switch
   },
   props: {
     visible: { type: Boolean, default: false },
@@ -65,9 +71,10 @@ export default {
     treeData: {
       type: Object,
       default: () => ({ treeArray: [], checkedTreeData: [] })
-    }
+    },
+    enableMcp: { type: Boolean, default: false }
   },
-  emits: ['cancel', 'confirm'],
+  emits: ['cancel', 'confirm', 'update:enableMcp'],
   setup(props, { emit }) {
     const shrinkIcon = iconExpand()
     const expandIcon = iconPutAway()
@@ -108,6 +115,33 @@ export default {
         })
       }
     }
+    const mcpEnabled = ref(props.enableMcp)
+
+    // 监听 props.enableMcp 的变化，同步到本地状态
+    watch(
+      () => props.enableMcp,
+      (newVal) => {
+        mcpEnabled.value = newVal
+      }
+    )
+
+    // 监听 props.data 的变化，重新选中所有项
+    watch(
+      () => props.data,
+      () => {
+        nextTick(() => {
+          if (gridRef.value) {
+            gridRef.value.setAllTreeExpansion(true)
+            gridRef.value.setAllSelection(true)
+          }
+        })
+      },
+      { deep: true }
+    )
+
+    const handleMcpChange = (value: boolean) => {
+      emit('update:enableMcp', value)
+    }
 
     const confirm = () => {
       const selectedData = fileTreeRef.value
@@ -131,10 +165,15 @@ export default {
       const currentPage = useCanvas().getCurrentPage()
       if (currentPage) {
         const initCurrentNode: any = props.data.find((item: any) => item.fileName === `${currentPage.name}.vue`)
-        nextTick(() => {
-          fileContent.value = initCurrentNode.fileContent
-          fileTreeRef.value.setCurrentKey(initCurrentNode.fileName)
-        })
+        // 同步 props 到本地状态
+      mcpEnabled.value = props.enableMcp
+
+      nextTick(() => {
+        if (gridRef.value) {
+            fileContent.value = initCurrentNode.fileContent
+            fileTreeRef.value.setCurrentKey(initCurrentNode.fileName)
+          }
+      })
       }
     }
 
@@ -148,14 +187,36 @@ export default {
       fileContent,
       fileTreeRef,
       nodeClick,
+      mcpEnabled,
       confirm,
-      initdialogBox
+      initdialogBox,
+      handleMcpChange
     }
   }
 }
 </script>
 
 <style lang="less" scoped>
+.mcp-switch-container {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--te-toolbars-generate-code-border-color, #ddd);
+
+  .mcp-switch-label {
+    font-size: 14px;
+    color: var(--te-toolbars-generate-code-text-color);
+    margin-right: 8px;
+  }
+
+  .mcp-switch-tip {
+    font-size: 12px;
+    color: var(--te-toolbars-generate-code-text-color-secondary, #999);
+    margin-left: 8px;
+  }
+}
+
 .dialog-box {
   :deep(.tiny-dialog-box__body) {
     height: 480px;
