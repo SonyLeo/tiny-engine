@@ -187,7 +187,8 @@ export default {
       }
 
       // 缓存 appSchema，用于后续根据 MCP 开关重新生成
-      state.appSchemaCache = appSchema
+      // 深拷贝 schema 避免被修改
+      state.appSchemaCache = JSON.parse(JSON.stringify(appSchema))
 
       // 根据 MCP 开关状态配置出码选项
       const codeGenOptions = {
@@ -306,7 +307,11 @@ export default {
       }
 
       try {
-        useNotify({ type: 'info', title: '正在重新生成代码...', message: '' })
+        useNotify({ type: 'info', title: '正在重新生成代码...' })
+
+        // 深拷贝 schema，避免生成过程修改原始缓存
+        // 这很重要，因为某些插件会直接修改 schema 对象
+        const schemaForGeneration = JSON.parse(JSON.stringify(state.appSchemaCache))
 
         // 根据新的 MCP 开关状态重新生成代码
         const codeGenOptions = {
@@ -317,7 +322,7 @@ export default {
           }
         }
 
-        const res = await generateAppCode(state.appSchemaCache, codeGenOptions)
+        const res = await generateAppCode(schemaForGeneration, codeGenOptions)
         const { genResult = [] } = res || {}
 
         const fileRes = genResult.map(({ fileContent, fileName, path, fileType }) => {

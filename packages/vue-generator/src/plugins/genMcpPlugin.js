@@ -1098,6 +1098,11 @@ function genMcpPlugin(options = {}) {
 
 // 导出属性转换钩子，供其他生成器使用
 export const handleTinyMcpConfigAttrHook = (schemaData, globalHooks, config) => {
+  // 早期返回：如果 MCP 未启用，直接返回，不处理任何 tiny_mcp_config
+  if (config?.mcpEnabled === false) {
+    return
+  }
+
   const { schema: { props = {} } = {} } = schemaData || {}
 
   // 检查是否有 tiny_mcp_config 属性
