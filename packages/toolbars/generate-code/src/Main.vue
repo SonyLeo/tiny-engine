@@ -56,8 +56,7 @@ export default {
       saveFilesInfo: [],
       saveFilesTree: [],
       enableMcp: false, // MCP 开关状态
-      appSchemaCache: null, // 缓存应用 schema，用于重新生成代码
-      metaDataCache: null // 缓存元数据
+      appSchemaCache: null // 缓存应用 schema，用于重新生成代码
     })
 
     const getParams = () => {
