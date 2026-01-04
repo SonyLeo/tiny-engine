@@ -55,8 +55,8 @@ export default {
       showDialogbox: false,
       saveFilesInfo: [],
       saveFilesTree: [],
-      enableMcp: false, // MCP 开关状态
-      appSchemaCache: null // 缓存应用 schema，用于重新生成代码
+      enableMcp: false,
+      appSchemaCache: null
     })
 
     const getParams = () => {
@@ -94,6 +94,15 @@ export default {
     }
 
     const { getAllNestedBlocksSchema, generateAppCode } = getMetaApi('engine.service.generateCode')
+
+    // 创建代码生成配置
+    const createCodeGenOptions = (enableMcp: boolean) => ({
+      pluginConfig: {
+        mcp: {
+          enabled: enableMcp
+        }
+      }
+    })
 
     const getAllPageDetails = async (pageList) => {
       const detailPromise = pageList.map(({ id }) => getMetaApi(META_APP.AppManage).getPageById(id))
@@ -253,18 +262,10 @@ export default {
       // 缓存 appSchema，用于后续根据 MCP 开关重新生成
       state.appSchemaCache = appSchema
 
-      // 根据 MCP 开关状态配置出码选项
-      const codeGenOptions = {
-        pluginConfig: {
-          mcp: {
-            enabled: state.enableMcp
-          }
-        }
-      }
-
-      const res = await generateAppCode(appSchema, codeGenOptions)
+      const res = await generateAppCode(appSchema, createCodeGenOptions(state.enableMcp))
 
       const { genResult = [] } = res || {}
+
       // 将文件目录处理成树状结构
       const fileTreeInfo = fileListToTreeObject(genResult)
 
@@ -358,48 +359,21 @@ export default {
       try {
         useNotify({ type: 'info', title: '正在重新生成代码...' })
 
-        // 深拷贝 schema，避免生成过程修改原始缓存
+        // 深拷贝 schema，避免 generateAppCode 修改原始缓存
         const schemaForGeneration = JSON.parse(JSON.stringify(state.appSchemaCache))
 
-        // 根据新的 MCP 开关状态重新生成代码
-        const codeGenOptions = {
-          pluginConfig: {
-            mcp: {
-              enabled: state.enableMcp
-            }
-          }
-        }
-
-        const res = await generateAppCode(schemaForGeneration, codeGenOptions)
+        const res = await generateAppCode(schemaForGeneration, createCodeGenOptions(state.enableMcp))
         const { genResult = [] } = res || {}
 
-        const fileRes = genResult.map(({ fileContent, fileName, path, fileType }) => {
-          const slash = path.endsWith('/') || path === '.' ? '' : '/'
-          let filePath = `${path}${slash}`
-          if (filePath.startsWith('./')) {
-            filePath = filePath.slice(2)
-          }
-          if (filePath.startsWith('.')) {
-            filePath = filePath.slice(1)
-          }
-          if (filePath.startsWith('/')) {
-            filePath = filePath.slice(1)
-          }
-
-          return {
-            fileContent,
-            filePath: `${filePath}${fileName}`,
-            fileType
-          }
-        })
-
-        // 更新文件列表
-        state.saveFilesInfo = fileRes
+        // 更新文件列表和树结构
+        state.saveFilesInfo = genResult
+        const fileTreeInfo = fileListToTreeObject(genResult)
+        state.saveFilesTree = fileTreeInfo as any
 
         useNotify({
           type: 'success',
           title: '代码重新生成完成',
-          message: `已${enabled ? '启用' : '禁用'} MCP 集成，共 ${fileRes.length} 个文件`
+          message: `已${enabled ? '启用' : '禁用'} MCP 集成，共 ${genResult.length} 个文件`
         })
       } catch (error) {
         useNotify({

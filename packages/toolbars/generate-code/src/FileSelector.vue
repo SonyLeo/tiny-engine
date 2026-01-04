@@ -9,11 +9,6 @@
     @close="$emit('cancel')"
     @open="initdialogBox"
   >
-    <div class="mcp-switch-container">
-      <span class="mcp-switch-label">启用 MCP 集成：</span>
-      <tiny-switch v-model="mcpEnabled" @change="handleMcpChange"></tiny-switch>
-      <span class="mcp-switch-tip">（开启后将生成 MCP 相关配置和工具代码）</span>
-    </div>
     <div class="dialog-grid">
       <div class="tree-wrap">
         <tiny-tree
@@ -40,8 +35,17 @@
       </div>
     </div>
     <template #footer>
-      <tiny-button type="primary" @click="confirm">确定</tiny-button>
-      <tiny-button @click="$emit('cancel')">取消</tiny-button>
+      <div class="dialog-footer">
+        <div class="mcp-switch-container">
+          <span class="mcp-switch-label">启用 MCP 集成：</span>
+          <tiny-switch v-model="mcpEnabled" @change="handleMcpChange"></tiny-switch>
+          <span class="mcp-switch-tip">（开启后将生成 MCP 相关配置和工具代码）</span>
+        </div>
+        <div class="dialog-footer-actions">
+          <tiny-button @click="$emit('cancel')">取消</tiny-button>
+          <tiny-button type="primary" @click="confirm">确定</tiny-button>
+        </div>
+      </div>
     </template>
   </tiny-dialog-box>
 </template>
@@ -117,6 +121,18 @@ export default {
     }
     const mcpEnabled = ref(props.enableMcp)
 
+    // 更新树的展开和选中状态
+    const updateTreeState = (checkedKeys: string[]) => {
+      if (!fileTreeRef.value) return
+
+      nextTick(() => {
+        // 设置选中的节点
+        fileTreeRef.value.setCheckedKeys(checkedKeys)
+        // 展开所有节点
+        fileTreeRef.value.expandAllNodes(true)
+      })
+    }
+
     // 监听 props.enableMcp 的变化，同步到本地状态
     watch(
       () => props.enableMcp,
@@ -129,12 +145,22 @@ export default {
     watch(
       () => props.data,
       () => {
-        nextTick(() => {
-          if (gridRef.value) {
-            gridRef.value.setAllTreeExpansion(true)
-            gridRef.value.setAllSelection(true)
-          }
-        })
+        if (fileTreeRef.value && props.treeData?.checkedTreeData) {
+          const allKeys = ['all', ...props.treeData.checkedTreeData]
+          updateTreeState(allKeys)
+        }
+      },
+      { deep: true }
+    )
+
+    // 监听 props.treeData 的变化，更新树的选中状态
+    watch(
+      () => props.treeData,
+      (newTreeData) => {
+        if (newTreeData?.checkedTreeData && fileTreeRef.value) {
+          const allKeys = ['all', ...newTreeData.checkedTreeData]
+          updateTreeState(allKeys)
+        }
       },
       { deep: true }
     )
@@ -166,14 +192,14 @@ export default {
       if (currentPage) {
         const initCurrentNode: any = props.data.find((item: any) => item.fileName === `${currentPage.name}.vue`)
         // 同步 props 到本地状态
-      mcpEnabled.value = props.enableMcp
+        mcpEnabled.value = props.enableMcp
 
-      nextTick(() => {
-        if (gridRef.value) {
+        nextTick(() => {
+          if (fileTreeRef.value && initCurrentNode) {
             fileContent.value = initCurrentNode.fileContent
             fileTreeRef.value.setCurrentKey(initCurrentNode.fileName)
           }
-      })
+        })
       }
     }
 
@@ -197,23 +223,46 @@ export default {
 </script>
 
 <style lang="less" scoped>
+.dialog-footer {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.dialog-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}
+
 .mcp-switch-container {
   display: flex;
   align-items: center;
-  padding: 12px 0;
-  margin-bottom: 12px;
-  border-bottom: 1px solid var(--te-toolbars-generate-code-border-color, #ddd);
+  gap: 8px;
+  flex-wrap: wrap;
 
   .mcp-switch-label {
     font-size: 14px;
     color: var(--te-toolbars-generate-code-text-color);
-    margin-right: 8px;
+    white-space: nowrap;
   }
 
   .mcp-switch-tip {
     font-size: 12px;
     color: var(--te-toolbars-generate-code-text-color-secondary, #999);
-    margin-left: 8px;
+    line-height: 1.5;
+
+    @media (max-width: 768px) {
+      flex-basis: 100%;
+    }
   }
 }
 
@@ -241,6 +290,9 @@ export default {
     }
 
     .tiny-dialog-box__footer {
+      display: flex;
+      justify-content: space-around;
+
       .tiny-button--primary {
         background-color: var(--te-toolbars-generate-code-bg-color-primary);
         border: none;
