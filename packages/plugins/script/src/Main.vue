@@ -34,14 +34,13 @@
 /* metaService: engine.plugins.pagecontroller.Main */
 import { onBeforeUnmount, reactive, provide } from 'vue'
 import { Button } from '@opentiny/vue'
-import { registerCompletion, type CompletionRegistration, type RegisterCompletionOptions } from 'monacopilot'
 import { VueMonaco, PluginPanel } from '@opentiny/tiny-engine-common'
 import { useHelp, useLayout, getMergeMeta } from '@opentiny/tiny-engine-meta-register'
 import { initCompletion } from '@opentiny/tiny-engine-common/js/completion'
 import { initLinter } from '@opentiny/tiny-engine-common/js/linter'
+import { initAICodeAssistant } from './ai-code-assistant/index'
+import type { AICodeAssistant } from './ai-code-assistant/types/index'
 import useMethod, { saveMethod, highlightMethod, getMethodNameList, getMethods } from './js/method'
-import { createCompletionHandler } from './ai-completion/adapters/index'
-import { shouldTriggerCompletion } from './ai-completion/triggers/completionTrigger'
 
 export const api = {
   saveMethod,
@@ -69,9 +68,7 @@ export default {
 
     const { PLUGIN_NAME } = useLayout()
 
-    type RequestHandler = NonNullable<RegisterCompletionOptions['requestHandler']>
-    type TriggerMode = NonNullable<RegisterCompletionOptions['trigger']>
-    let completion: CompletionRegistration | null = null
+    let aiAssistant: AICodeAssistant | null = null
 
     const panelState = reactive({
       emitEvent: emit
@@ -91,7 +88,6 @@ export default {
       // ❌ 顶层/常规 变量声明 \n const someVariable = 42 
       // ❌ 表达式 \n const result = someVariable + 10`,
 
-      // 禁用滚动条边边一直显示的边框
       overviewRulerBorder: false,
       renderLineHighlightOnlyWhenFocus: true,
       tabSize: 2,
@@ -121,50 +117,49 @@ export default {
       // 保留原有的 ESLint
       state.linterWorker = initLinter(editor, monacoRef.value.getMonaco(), state) as any
 
-      const { aiCompletionEnabled, aiCompletionTrigger = 'onIdle' } =
-        getMergeMeta('engine.plugins.pagecontroller')?.options || {}
+      // 初始化 AI Code Assistant
+      const metaOptions = getMergeMeta('engine.plugins.pagecontroller')?.options || {}
+      // 兼容旧配置名 aiCompletionEnabled
+      const aiCodeAssistantEnabled = metaOptions.aiCodeAssistantEnabled || metaOptions.aiCompletionEnabled
+      const nesEnabled = metaOptions.nesEnabled
 
-      if (aiCompletionEnabled) {
+      // eslint-disable-next-line no-console
+      console.log('[Main.vue] AI Code Assistant 配置:', {
+        aiCodeAssistantEnabled,
+        nesEnabled,
+        metaOptions
+      })
+
+      if (aiCodeAssistantEnabled) {
         try {
-          const monaco = monacoRef.value.getMonaco()
-          const editor = monacoRef.value.getEditor()
+          const monacoInstance = monacoRef.value.getMonaco()
+          const editorInstance = monacoRef.value.getEditor()
 
-          completion = registerCompletion(monaco, editor, {
-            language: 'javascript',
-            filename: 'page.js',
-            maxContextLines: 50,
-            enableCaching: true,
-            allowFollowUpCompletions: false,
-            trigger: aiCompletionTrigger as TriggerMode,
-            triggerIf: ({ text, position }) => {
-              return shouldTriggerCompletion({
-                text,
-                position
-              })
-            },
-            requestHandler: createCompletionHandler() as RequestHandler
+          // eslint-disable-next-line no-console
+          console.log('[Main.vue] 开始初始化 AI Code Assistant...')
+
+          aiAssistant = initAICodeAssistant(monacoInstance, editorInstance, {
+            fim: { enabled: true },
+            nes: { enabled: true },
+            language: 'javascript'
           })
 
-          monaco.editor.addEditorAction({
-            id: 'monacopilot.triggerCompletion',
-            label: 'Complete Code',
-            contextMenuGroupId: 'navigation',
-            keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.Space],
-            run: () => {
-              completion!.trigger()
-            }
-          })
+          // eslint-disable-next-line no-console
+          console.log('[Main.vue] ✅ AI Code Assistant 初始化成功')
         } catch (error) {
           // eslint-disable-next-line no-console
-          console.error('❌ AI 补全注册失败:', error)
+          console.error('❌ AI Code Assistant 初始化失败:', error)
         }
+      } else {
+        // eslint-disable-next-line no-console
+        console.warn('[Main.vue] ⚠️ AI Code Assistant 未启用，请检查配置: aiCodeAssistantEnabled')
       }
     }
 
     onBeforeUnmount(() => {
-      // 清理 AI 补全
-      if (completion) {
-        completion.deregister()
+      // 清理 AI Code Assistant
+      if (aiAssistant) {
+        aiAssistant.dispose()
       }
       ;(state.completionProvider as any)?.forEach?.((provider: any) => {
         provider?.dispose?.()
