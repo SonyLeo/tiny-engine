@@ -5,7 +5,7 @@
  */
 
 import diff from 'fast-diff'
-import type { WordReplaceInfo, InlineInsertInfo } from '../types/index'
+import type { WordReplaceInfo, InlineInsertInfo } from '../types'
 
 export class DiffCalculator {
   /**

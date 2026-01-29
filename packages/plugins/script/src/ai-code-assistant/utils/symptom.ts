@@ -2,7 +2,7 @@
  * Symptom Detector - 症状检测器（数据准备器）
  */
 
-import type { EditRecord, NESPayload } from '../types/index'
+import type { EditRecord, NESPayload } from '../types'
 import type * as monaco from 'monaco-editor'
 
 export class SymptomDetector {

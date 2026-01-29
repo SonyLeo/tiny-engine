@@ -4,15 +4,15 @@
  */
 
 import * as monaco from 'monaco-editor'
-import type { AICodeAssistantConfig, AICodeAssistant } from './types/index'
+import type { AICodeAssistantConfig, AICodeAssistant } from './types'
 import { DEFAULT_CONFIG } from './config'
-import { FIMEngine } from './fim/FIMEngine'
-import { NESEngine } from './nes/NESEngine'
-import { EditDispatcher } from './managers/EditDispatcher'
-import { EditHistoryManager } from './managers/EditHistoryManager'
+import { FIMEngine } from './core/FIMEngine'
+import { NESEngine } from './core/NESEngine'
+import { EditDispatcher } from './core/EditDispatcher'
+import { EditHistoryManager } from './core/EditHistoryManager'
 
 // 加载样式
-import './nes/styles.css'
+import './ui/styles.css'
 
 /**
  * 初始化 AI 代码助手
@@ -22,7 +22,7 @@ import './nes/styles.css'
  * @returns AI 代码助手实例
  */
 export function initAICodeAssistant(
-  monacoInstance: typeof monaco,
+  _monacoInstance: typeof monaco,
   editor: monaco.editor.IStandaloneCodeEditor,
   config: AICodeAssistantConfig
 ): AICodeAssistant {

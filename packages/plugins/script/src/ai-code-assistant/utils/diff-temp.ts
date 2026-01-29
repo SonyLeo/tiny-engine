@@ -2,7 +2,7 @@
  * Coordinate Fixer - 坐标修复工具
  */
 
-import type { Prediction } from '../types/index'
+import type { Prediction } from '../types'
 
 export class CoordinateFixer {
   /**

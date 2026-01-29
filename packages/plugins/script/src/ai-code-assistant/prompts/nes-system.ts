@@ -1,6 +1,5 @@
 /**
- * NES (Next Edit Suggestion) System Prompt - Optimized Version
- * Frontend auto-calculates coordinates using DiffCalculator
+ * NES (Next Edit Suggestion) System Prompt
  */
 
 export const NES_SYSTEM_PROMPT = `You are an intelligent code refactoring assistant.

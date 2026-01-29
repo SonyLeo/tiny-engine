@@ -4,12 +4,12 @@
  */
 
 import * as monaco from 'monaco-editor'
-import type { EditRecord, Prediction, NESConfig } from '../types/index'
-import { SymptomDetector } from '../managers/SymptomDetector'
-import { SuggestionQueue } from './SuggestionQueue'
-import { NESRenderer } from './NESRenderer'
-import { DiffCalculator } from '../utils/DiffCalculator'
-import { ModelAdapter } from '../adapters/ModelAdapter'
+import type { EditRecord, Prediction, NESConfig } from '../types'
+import { SymptomDetector } from '../utils/symptom'
+import { SuggestionQueue } from '../ui/SuggestionQueue'
+import { NESRenderer } from '../ui/NESRenderer'
+import { DiffCalculator } from '../utils/diff'
+import { ModelAdapter } from '../api/ModelAdapter'
 
 export class NESEngine {
   private state: 'SLEEPING' | 'DIAGNOSING' | 'SUGGESTING' = 'SLEEPING'

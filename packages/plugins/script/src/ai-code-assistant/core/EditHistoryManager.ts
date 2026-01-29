@@ -3,7 +3,7 @@
  */
 
 import type * as monaco from 'monaco-editor'
-import type { EditRecord } from '../types/index'
+import type { EditRecord } from '../types'
 
 export class EditHistoryManager {
   private editHistory: EditRecord[] = []

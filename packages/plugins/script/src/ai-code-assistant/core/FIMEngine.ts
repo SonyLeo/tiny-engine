@@ -3,7 +3,7 @@
  */
 
 import * as monaco from 'monaco-editor'
-import { ModelAdapter } from '../adapters/ModelAdapter'
+import { ModelAdapter } from '../api/ModelAdapter'
 
 export class FIMEngine {
   private disposable: monaco.IDisposable | null = null

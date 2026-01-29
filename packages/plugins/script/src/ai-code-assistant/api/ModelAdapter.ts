@@ -4,12 +4,12 @@
  */
 
 import { getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
-import { FIMPromptBuilder } from '../prompts/fim/builder'
-import { buildNESUserPrompt, parseNESResponse } from '../prompts/nes/builder'
-import { NES_SYSTEM_PROMPT } from '../prompts/nes/systemPrompt'
-import { cleanCompletion, buildLowcodeMetadata } from '../utils/CompletionUtils.ts'
-import { callQwenChat } from './QwenAdapter.ts'
-import { QWEN_CONFIG, FIXED_MODEL_CONFIG, MODEL_CONFIG } from './constants.ts'
+import { FIMPromptBuilder, FIM_SYSTEM_PROMPT } from '../prompts/fim'
+import { buildNESUserPrompt, parseNESResponse } from '../prompts/nes-builder'
+import { NES_SYSTEM_PROMPT } from '../prompts/nes-system'
+import { buildLowcodeMetadata, cleanCompletion } from '../utils/code'
+import { callQwenChat } from './QwenClient'
+import { QWEN_CONFIG, FIXED_MODEL_CONFIG, MODEL_CONFIG } from '../config'
 
 /**
  * 统一的模型适配器（固定使用 Qwen）
@@ -71,8 +71,6 @@ export class ModelAdapter {
         fimMetadata
       )
 
-      // 获取 System Prompt 和 Instruction
-      const { FIM_SYSTEM_PROMPT } = await import('../prompts/fim/systemPrompt')
       const instruction = this.fimBuilder.selectInstruction(cursorContext, fimMetadata.language || 'javascript')
 
       // 使用 Chat API（支持 System Prompt）

@@ -2,8 +2,8 @@
  * Model Utils
  */
 
-import { MODEL_CONFIG } from '../adapters/constants'
-import { FIM_STOP_SEQUENCES } from '../prompts/constants'
+import { MODEL_CONFIG } from '../config'
+import { FIM_STOP_SEQUENCES } from '../config'
 
 export const MODEL_COMMON_CONFIG = {
   TOKEN_LIMITS: {

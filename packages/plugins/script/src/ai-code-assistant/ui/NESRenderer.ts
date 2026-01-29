@@ -11,7 +11,7 @@
  */
 
 import * as monaco from 'monaco-editor'
-import type { Prediction, ChangeType } from '../types/index'
+import type { Prediction, ChangeType } from '../types'
 import { DecorationManager } from './DecorationManager'
 import { ViewZoneManager } from './ViewZoneManager'
 
@@ -71,7 +71,7 @@ export class NESRenderer {
   /**
    * 显示 HintBar
    */
-  public showHintBar(lineNumber: number, explanation: string, previewShown: boolean = false, progress?: string): void {
+  public showHintBar(_lineNumber: number, explanation: string, previewShown: boolean = false, progress?: string): void {
     // 移除旧的 HintBar
     if (this.hintBarElement) {
       this.hintBarElement.remove()

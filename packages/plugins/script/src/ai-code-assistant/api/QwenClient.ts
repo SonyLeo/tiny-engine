@@ -2,7 +2,7 @@
  * Qwen API Adapter
  */
 
-import { QWEN_CONFIG, HTTP_CONFIG, ERROR_MESSAGES } from './constants'
+import { QWEN_CONFIG, HTTP_CONFIG, ERROR_MESSAGES } from '../config'
 
 /**
  * Qwen FIM API (Completion)
@@ -14,11 +14,11 @@ export async function callQwenFIM(fimPrompt: string, config: any, apiKey: string
     model: config.model,
     prompt: fimPrompt,
     max_tokens: config.maxTokens,
-    temperature: config.temperature || QWEN_CONFIG.DEFAULT_TEMPERATURE,
-    top_p: config.top_p || QWEN_CONFIG.TOP_P,
+    temperature: config.temperature ?? QWEN_CONFIG.DEFAULT_TEMPERATURE,
+    top_p: config.top_p ?? QWEN_CONFIG.TOP_P,
     stream: HTTP_CONFIG.STREAM,
     stop: config.stopSequences,
-    presence_penalty: QWEN_CONFIG.PRESENCE_PENALTY
+    presence_penalty: config.presence_penalty ?? QWEN_CONFIG.PRESENCE_PENALTY
   }
 
   const response = await fetch(completionsUrl, {
@@ -49,8 +49,8 @@ export async function callQwenChat(messages: any[], config: any, apiKey: string,
     model: config.model,
     messages,
     max_tokens: config.maxTokens,
-    temperature: config.temperature || QWEN_CONFIG.DEFAULT_TEMPERATURE,
-    top_p: config.top_p || QWEN_CONFIG.TOP_P,
+    temperature: config.temperature ?? QWEN_CONFIG.DEFAULT_TEMPERATURE,
+    top_p: config.top_p ?? QWEN_CONFIG.TOP_P,
     stream: HTTP_CONFIG.STREAM
   }
 

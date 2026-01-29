@@ -39,7 +39,7 @@ import { useHelp, useLayout, getMergeMeta } from '@opentiny/tiny-engine-meta-reg
 import { initCompletion } from '@opentiny/tiny-engine-common/js/completion'
 import { initLinter } from '@opentiny/tiny-engine-common/js/linter'
 import { initAICodeAssistant } from './ai-code-assistant/index'
-import type { AICodeAssistant } from './ai-code-assistant/types/index'
+import type { AICodeAssistant } from './ai-code-assistant/types'
 import useMethod, { saveMethod, highlightMethod, getMethodNameList, getMethods } from './js/method'
 
 export const api = {
