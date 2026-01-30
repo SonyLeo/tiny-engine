@@ -14,6 +14,7 @@ import * as monaco from 'monaco-editor'
 import type { Prediction, ChangeType } from '../types'
 import { DecorationManager } from './DecorationManager'
 import { ViewZoneManager } from './ViewZoneManager'
+import { getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
 
 export class NESRenderer {
   private currentPrediction: Prediction | null = null
@@ -23,9 +24,56 @@ export class NESRenderer {
   private decorationManager: DecorationManager
   private viewZoneManager: ViewZoneManager
 
+  // 面板容器
+  private panelContainer: HTMLElement | null = null
+
   constructor(private editor: monaco.editor.IStandaloneCodeEditor) {
     this.decorationManager = new DecorationManager(editor)
     this.viewZoneManager = new ViewZoneManager(editor)
+
+    // 查找面板容器
+    this.findPanelContainer()
+  }
+
+  /**
+   * 查找面板容器元素
+   */
+  private findPanelContainer(): void {
+    let element = this.editor.getDomNode()?.parentElement
+
+    while (element) {
+      if (element.classList.contains('plugin-page-js-container') || element.classList.contains('plugin-panel')) {
+        this.panelContainer = element
+
+        if (getComputedStyle(element).position === 'static') {
+          element.style.position = 'relative'
+        }
+
+        break
+      }
+      element = element.parentElement
+    }
+
+    // 如果没找到面板容器，回退到 body
+    if (!this.panelContainer) {
+      // eslint-disable-next-line no-console
+      console.warn('[NESRenderer] 未找到面板容器，HintBar 将显示在页面右下角')
+      this.panelContainer = document.body
+    }
+  }
+
+  /**
+   * 检测当前主题（亮色/暗色）
+   */
+  private detectTheme(): 'light' | 'dark' {
+    try {
+      const themeService = getMetaApi(META_SERVICE.ThemeSwitch)
+      const currentTheme = themeService?.getThemeState?.()?.theme
+
+      return currentTheme === 'light' ? 'light' : 'dark'
+    } catch {
+      return 'dark'
+    }
   }
 
   /**
@@ -77,47 +125,50 @@ export class NESRenderer {
       this.hintBarElement.remove()
     }
 
+    // 检测主题
+    const theme = this.detectTheme()
+
     // 创建 HintBar 元素
     this.hintBarElement = document.createElement('div')
     this.hintBarElement.className = 'nes-hint-bar'
-    this.hintBarElement.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #252526;
-      border: 1px solid #667eea;
-      border-radius: 4px;
-      padding: 12px 16px;
-      color: #d4d4d4;
-      font-size: 13px;
-      z-index: 1000;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      max-width: 300px;
-    `
+    this.hintBarElement.setAttribute('data-theme', theme)
+
+    // 根据容器类型决定定位方式（只设置 position）
+    const isInPanel = this.panelContainer !== document.body
+    this.hintBarElement.style.position = isInPanel ? 'absolute' : 'fixed'
 
     // 根据预览状态显示不同的提示
-    const tabHint = previewShown
-      ? '<span style="color: #81c784;">Tab</span> Accept'
-      : '<span style="color: #9cdcfe;">Tab</span> Preview'
+    const tabClass = previewShown ? 'nes-shortcut-tab-accept' : 'nes-shortcut-tab-preview'
+    const tabText = previewShown ? 'Accept' : 'Preview'
 
     // 进度显示
-    const progressHint = progress ? `<span style="color: #888; font-size: 11px;">${progress}</span>` : ''
+    const progressHtml = progress ? `<span class="nes-hint-bar-progress">${progress}</span>` : ''
 
-    // 内容
+    // 内容 - 使用 CSS 类
     this.hintBarElement.innerHTML = `
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-weight: 500;">💡 Suggestion</span>
-        ${progressHint}
-      </div>
-      <div style="margin-bottom: 12px; color: #b0bec5;">${explanation}</div>
-      <div style="display: flex; gap: 8px; font-size: 12px; flex-wrap: wrap;">
-        ${tabHint}
-        <span style="color: #ffb74d;">Alt+N</span> Skip
-        <span style="color: #4fc3f7;">Esc</span> Close
+      <div class="nes-hint-bar-container">
+        <div class="nes-hint-bar-icon">💡</div>
+        <div class="nes-hint-bar-content">
+          <div class="nes-hint-bar-header">
+            <span class="nes-hint-bar-title">Suggestion</span>
+            ${progressHtml}
+          </div>
+          <div class="nes-hint-bar-explanation">${explanation}</div>
+          <div class="nes-hint-bar-shortcuts">
+            <span><span class="${tabClass}">Tab</span> ${tabText}</span>
+            <span><span class="nes-shortcut-alt-n">Alt+N</span> Skip</span>
+            <span><span class="nes-shortcut-esc">Esc</span> Close</span>
+          </div>
+        </div>
       </div>
     `
 
-    document.body.appendChild(this.hintBarElement)
+    // 添加到面板容器或 body
+    if (this.panelContainer) {
+      this.panelContainer.appendChild(this.hintBarElement)
+    } else {
+      document.body.appendChild(this.hintBarElement)
+    }
   }
 
   /**

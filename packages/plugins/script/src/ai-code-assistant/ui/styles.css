@@ -19,12 +19,6 @@
   transform: scale(1.1);
 }
 
-/* 兼容旧的 Glyph 类名 */
-.nes-glyph-arrow {
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16"><path fill="%23667eea" d="M8 2l6 6-6 6V2z"/></svg>') center/contain no-repeat;
-  background-color: rgba(102, 126, 234, 0.1);
-}
-
 /* ==================== 高亮样式 ==================== */
 
 /* 整行替换 - 红色背景 */
@@ -48,12 +42,6 @@
 /* 删除行 - 深红色背景 */
 .nes-highlight-delete {
   background-color: rgba(255, 0, 0, 0.2) !important;
-}
-
-/* 高亮行（兼容旧类名） */
-.nes-highlight-line {
-  background-color: rgba(102, 126, 234, 0.05);
-  border-left: 3px solid #667eea;
 }
 
 /* ==================== 预览区域样式 ==================== */
@@ -126,35 +114,144 @@
   border: 1px solid rgba(0, 255, 0, 0.25);
 }
 
-/* Diff 容器（兼容旧类名） */
-.nes-diff-container {
-  background: #1e1e1e;
-  border-top: 1px solid #3e3e3e;
-  border-bottom: 1px solid #3e3e3e;
-}
-
-.nes-diff-container .monaco-editor {
-  background: #1e1e1e;
-}
-
-.nes-diff-container .monaco-diff-editor {
-  background: #1e1e1e;
-}
-
-.nes-diff-container .line-delete {
-  background-color: rgba(255, 0, 0, 0.1);
-}
-
-.nes-diff-container .line-insert {
-  background-color: rgba(0, 255, 0, 0.1);
-}
-
 /* ==================== HintBar 样式 ==================== */
 
+/* HintBar 容器 */
 .nes-hint-bar {
+  bottom: 20px;
+  right: 20px;
+  
+  /* 布局 */
+  border-radius: 4px;
+  padding: 12px 16px;
+  max-width: 300px;
+  
+  /* 字体 */
+  font-size: 13px;
+  
+  /* 层级 */
+  z-index: 1000;
+  
+  /* 动画 */
   animation: slideIn 0.3s ease-out;
 }
 
+/* 亮色主题 */
+.nes-hint-bar[data-theme="light"] {
+  background: #ffffff;
+  border: 1px solid #5b7ee5;
+  color: #333333;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* 暗色主题 */
+.nes-hint-bar[data-theme="dark"] {
+  background: #252526;
+  border: 1px solid #667eea;
+  color: #d4d4d4;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* HintBar 主容器 - 左右布局 */
+.nes-hint-bar-container {
+  display: flex;
+  gap: 4px;
+  align-items: flex-start;
+}
+
+/* 灯泡图标 */
+.nes-hint-bar-icon {
+  font-size: 14px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+/* 内容区域 */
+.nes-hint-bar-content {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 标题行 */
+.nes-hint-bar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.nes-hint-bar-title {
+  font-weight: 500;
+}
+
+.nes-hint-bar-progress {
+  font-size: 11px;
+}
+
+.nes-hint-bar[data-theme="light"] .nes-hint-bar-progress {
+  color: #666666;
+}
+
+.nes-hint-bar[data-theme="dark"] .nes-hint-bar-progress {
+  color: #b0bec5;
+}
+
+/* 说明文字 */
+.nes-hint-bar-explanation {
+  margin-bottom: 12px;
+}
+
+.nes-hint-bar[data-theme="light"] .nes-hint-bar-explanation {
+  color: #666666;
+}
+
+.nes-hint-bar[data-theme="dark"] .nes-hint-bar-explanation {
+  color: #b0bec5;
+}
+
+/* 快捷键提示 */
+.nes-hint-bar-shortcuts {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+
+/* 快捷键颜色 - 亮色主题 */
+.nes-hint-bar[data-theme="light"] .nes-shortcut-tab-accept {
+  color: #2e7d32;
+}
+
+.nes-hint-bar[data-theme="light"] .nes-shortcut-tab-preview {
+  color: #1976d2;
+}
+
+.nes-hint-bar[data-theme="light"] .nes-shortcut-alt-n {
+  color: #f57c00;
+}
+
+.nes-hint-bar[data-theme="light"] .nes-shortcut-esc {
+  color: #0288d1;
+}
+
+/* 快捷键颜色 - 暗色主题 */
+.nes-hint-bar[data-theme="dark"] .nes-shortcut-tab-accept {
+  color: #81c784;
+}
+
+.nes-hint-bar[data-theme="dark"] .nes-shortcut-tab-preview {
+  color: #9cdcfe;
+}
+
+.nes-hint-bar[data-theme="dark"] .nes-shortcut-alt-n {
+  color: #ffb74d;
+}
+
+.nes-hint-bar[data-theme="dark"] .nes-shortcut-esc {
+  color: #4fc3f7;
+}
+
+/* 动画 */
 @keyframes slideIn {
   from {
     transform: translateY(20px);

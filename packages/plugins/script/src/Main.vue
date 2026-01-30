@@ -80,6 +80,7 @@ export default {
       minimap: {
         enabled: false
       },
+      glyphMargin: true,
       placeholder: `// ✅ 函数声明可以保存
        function topLevelFunction(){ 
       \u200B \u200B const message = 'hello tiny-engine.' 
