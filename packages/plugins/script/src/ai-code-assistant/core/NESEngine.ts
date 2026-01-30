@@ -21,7 +21,7 @@ export class NESEngine {
   private abortController: AbortController | null = null
   private onEditApplied?: (lineNumber: number) => void
 
-  constructor(private editor: monaco.editor.IStandaloneCodeEditor, private config: NESConfig) {
+  constructor(private editor: monaco.editor.IStandaloneCodeEditor, _config: NESConfig) {
     this.symptomDetector = new SymptomDetector()
     this.suggestionQueue = new SuggestionQueue()
     this.renderer = new NESRenderer(editor)
@@ -120,7 +120,7 @@ export class NESEngine {
   }
 
   /**
-   * 显示第一个建议（只显示 Glyph，不展开预览）
+   * 显示第一个建议（直接显示预览）
    */
   private showFirstSuggestion(): void {
     const prediction = this.suggestionQueue.peek()
@@ -130,25 +130,11 @@ export class NESEngine {
       const total = this.suggestionQueue.size()
       const progress = total > 1 ? `${current}/${total}` : undefined
 
-      // 只显示 Glyph 和 HintBar，不展开预览
+      // 直接显示预览（优化：不需要两次 Tab）
       this.renderer.renderSuggestion(prediction)
-      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, false, progress)
+      this.renderer.showPreview(prediction)
+      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, true, progress)
 
-      // 设置预览状态为未展开
-      this.previewShown = false
-    }
-  }
-
-  /**
-   * 切换到预览模式（Tab 键触发）
-   */
-  public togglePreview(): void {
-    const prediction = this.suggestionQueue.peek()
-    if (!prediction) {
-      return
-    }
-
-    if (!this.previewShown) {
       // 跳转到建议位置
       this.editor.setPosition({
         lineNumber: prediction.targetLine,
@@ -156,18 +142,7 @@ export class NESEngine {
       })
       this.editor.revealLineInCenter(prediction.targetLine)
 
-      // 展开预览
-      this.renderer.showPreview(prediction)
-
-      // 计算进度
-      const current = this.suggestionQueue.getCurrentIndex() + 1
-      const total = this.suggestionQueue.size()
-      const progress = total > 1 ? `${current}/${total}` : undefined
-
-      // 更新 HintBar 提示（显示 "Tab Accept"）
-      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, true, progress)
-
-      // 更新状态
+      // 设置预览状态为已展开
       this.previewShown = true
     }
   }
@@ -230,7 +205,7 @@ export class NESEngine {
     // 只清除渲染，不移除队列
     this.renderer.clear()
 
-    // 如果还有建议，重新显示（只显示 Glyph 和 HintBar）
+    // 如果还有建议，重新显示（直接显示预览）
     const prediction = this.suggestionQueue.peek()
     if (prediction) {
       // 计算进度
@@ -238,8 +213,20 @@ export class NESEngine {
       const total = this.suggestionQueue.size()
       const progress = total > 1 ? `${current}/${total}` : undefined
 
+      // 直接显示预览
       this.renderer.renderSuggestion(prediction)
-      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, false, progress)
+      this.renderer.showPreview(prediction)
+      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, true, progress)
+
+      // 跳转到建议位置
+      this.editor.setPosition({
+        lineNumber: prediction.targetLine,
+        column: 1
+      })
+      this.editor.revealLineInCenter(prediction.targetLine)
+
+      // 设置预览状态
+      this.previewShown = true
     }
   }
 

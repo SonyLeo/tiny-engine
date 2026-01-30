@@ -143,23 +143,16 @@ export function initAICodeAssistant(
 
   // 注册快捷键（只注册 NES 相关的）
   if (nesEngine) {
-    // Tab - 智能行为：
-    // - 预览未展开 → 跳转并展开预览
-    // - 预览已展开 → 接受建议
-    // - NES 未激活 → 让 Monaco 处理（FIM）
+    // Tab - 接受当前建议（预览已默认显示）
+    // - 单个建议：接受并关闭 NES
+    // - 多个建议：接受当前，显示下一个预览
     editor.onKeyDown((e) => {
       if (e.keyCode === monaco.KeyCode.Tab && nesEngine!.isActive()) {
         e.preventDefault()
         e.stopPropagation()
 
-        // 检查预览是否已展开
-        if (nesEngine!.isPreviewShown()) {
-          // 预览已展开 → 接受建议
-          nesEngine!.acceptSuggestion()
-        } else {
-          // 预览未展开 → 展开预览
-          nesEngine!.togglePreview()
-        }
+        // 直接接受建议（预览已默认显示）
+        nesEngine!.acceptSuggestion()
       }
     })
 
