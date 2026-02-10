@@ -80,6 +80,31 @@ export const ERROR_MESSAGES = {
   QWEN_API_ERROR: 'Qwen API 错误'
 }
 
+// ==================== Token 动态计算 ====================
+
+export const TOKEN_LIMITS = {
+  EXPRESSION: 64,
+  STATEMENT: 256,
+  FUNCTION: 200,
+  CLASS: 256,
+  DEFAULT: 128
+}
+
+// ==================== Stop Sequences ====================
+
+export const STOP_SEQUENCES = {
+  CORE: ['\n\n', '```'],
+  NEW_SCOPE: ['\nfunction ', '\nclass ', '\nexport ', '\nimport '],
+  BLOCK_END: ['\n}', '\n};']
+}
+
+export const CONTEXT_STOP_SEQUENCES: Record<string, string[]> = {
+  EXPRESSION: [';', ',', '\n)'],
+  COMMENT: ['\n\n', '*/'],
+  OBJECT: ['\n}', '\n};'],
+  FUNCTION: ['\n}', '\nfunction ', '\nreturn ']
+}
+
 // ==================== 提示词配置 ====================
 
 /**

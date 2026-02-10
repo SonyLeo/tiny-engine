@@ -4,12 +4,73 @@
  */
 
 import { getMetaApi, META_SERVICE } from '@opentiny/tiny-engine-meta-register'
-import { FIMPromptBuilder, FIM_SYSTEM_PROMPT } from '../prompts/fim'
+import {
+  FIMPromptBuilder,
+  FIM_SYSTEM_PROMPT,
+  createLowcodeInstruction,
+  extractCodeContext,
+  buildCodeMetaComment
+} from '../prompts/fim'
 import { buildNESUserPrompt, parseNESResponse } from '../prompts/nes-builder'
 import { NES_SYSTEM_PROMPT } from '../prompts/nes-system'
 import { buildLowcodeMetadata, cleanCompletion } from '../utils/code'
+import { formatLowcodeContext } from '../utils/lowcodeFormatter'
 import { callQwenChat } from './QwenClient'
-import { QWEN_CONFIG, FIXED_MODEL_CONFIG, HTTP_CONFIG } from '../config'
+import {
+  QWEN_CONFIG,
+  FIXED_MODEL_CONFIG,
+  HTTP_CONFIG,
+  TOKEN_LIMITS,
+  STOP_SEQUENCES,
+  CONTEXT_STOP_SEQUENCES
+} from '../config'
+
+// ==================== 辅助函数 ====================
+
+/**
+ * 根据光标上下文动态计算 max_tokens
+ */
+function calculateDynamicTokens(cursorContext: any): number {
+  if (!cursorContext) return TOKEN_LIMITS.DEFAULT
+
+  if (cursorContext.needsExpression) return TOKEN_LIMITS.EXPRESSION
+  if (cursorContext.needsStatement) return TOKEN_LIMITS.STATEMENT
+  if (cursorContext.inFunction) return TOKEN_LIMITS.FUNCTION
+  if (cursorContext.inClass) return TOKEN_LIMITS.CLASS
+
+  return TOKEN_LIMITS.DEFAULT
+}
+
+/**
+ * 根据光标上下文构建 stop sequences（最多 16 个）
+ */
+function buildStopSequences(cursorContext: any): string[] {
+  const stops: string[] = [...STOP_SEQUENCES.CORE]
+
+  if (cursorContext) {
+    if (cursorContext.inBlockComment || cursorContext.inLineComment) {
+      stops.push(...CONTEXT_STOP_SEQUENCES.COMMENT)
+    } else if (cursorContext.needsExpression) {
+      stops.push(...CONTEXT_STOP_SEQUENCES.EXPRESSION)
+      stops.push(...STOP_SEQUENCES.NEW_SCOPE)
+    } else if (cursorContext.inObject) {
+      stops.push(...CONTEXT_STOP_SEQUENCES.OBJECT)
+      stops.push(...STOP_SEQUENCES.NEW_SCOPE)
+    } else if (cursorContext.inFunction) {
+      stops.push(...CONTEXT_STOP_SEQUENCES.FUNCTION)
+      stops.push(...STOP_SEQUENCES.BLOCK_END)
+    } else {
+      stops.push(...STOP_SEQUENCES.NEW_SCOPE)
+      stops.push(...STOP_SEQUENCES.BLOCK_END)
+    }
+  } else {
+    stops.push(...STOP_SEQUENCES.NEW_SCOPE)
+    stops.push(...STOP_SEQUENCES.BLOCK_END)
+  }
+
+  const unique = [...new Set(stops)]
+  return unique.length > 16 ? unique.slice(0, 16) : unique
+}
 
 /**
  * 统一的模型适配器（固定使用 Qwen）
@@ -59,29 +120,42 @@ export class ModelAdapter {
 
       const { apiKey, baseUrl } = config
       const lowcodeMetadata = buildLowcodeMetadata()
+      const language = 'javascript'
+
+      // 格式化低代码元数据（提取签名/键名/类型，减少 token 消耗）
+      const formattedContext = formatLowcodeContext(lowcodeMetadata)
 
       const fimMetadata = {
-        language: 'javascript',
+        language,
         isComment: prefix.trim().endsWith('//') || prefix.includes('/*'),
-        lowcodeContext: lowcodeMetadata
-          ? {
-              dataSource: lowcodeMetadata.dataSource || [],
-              utils: lowcodeMetadata.utils || [],
-              globalState: lowcodeMetadata.globalState || [],
-              state: lowcodeMetadata.state || {},
-              methods: lowcodeMetadata.methods || {},
-              currentSchema: lowcodeMetadata.currentSchema || null
-            }
-          : null
+        lowcodeContext: formattedContext
       }
 
-      // 构建 FIM Prompt
+      // 提取代码上下文元信息（函数名、类名等）
+      const codeContext = extractCodeContext(prefix)
+      const metaComment = buildCodeMetaComment(language, codeContext)
+
+      // 构建 FIM Prompt（在 prefix 前注入元信息注释）
       const { fimPrompt, cursorContext } = this.fimBuilder.buildOptimizedFIMPrompt(
-        `${prefix}[CURSOR]${suffix}`,
+        `${metaComment}${prefix}[CURSOR]${suffix}`,
         fimMetadata
       )
 
-      const instruction = this.fimBuilder.selectInstruction(cursorContext, fimMetadata.language || 'javascript')
+      // 选择 instruction（低代码增强 or 普通 or 注释）
+      let instruction: string
+      if (cursorContext.inBlockComment || cursorContext.inLineComment) {
+        instruction = this.fimBuilder.selectInstruction(cursorContext, language)
+      } else if (fimMetadata.lowcodeContext) {
+        instruction = createLowcodeInstruction(language, fimMetadata.lowcodeContext)
+      } else {
+        instruction = this.fimBuilder.selectInstruction(cursorContext, language)
+      }
+
+      // 动态 Token 计算
+      const maxTokens = calculateDynamicTokens(cursorContext)
+
+      // 动态 Stop Sequences
+      const stop = buildStopSequences(cursorContext)
 
       // 合并外部 signal、去重 signal 和超时 signal
       const timeoutSignal = AbortSignal.timeout(HTTP_CONFIG.FIM_TIMEOUT_MS)
@@ -97,10 +171,11 @@ export class ModelAdapter {
         ],
         {
           model: FIXED_MODEL_CONFIG.FIM.MODEL,
-          maxTokens: FIXED_MODEL_CONFIG.FIM.MAX_TOKENS,
+          maxTokens,
           temperature: FIXED_MODEL_CONFIG.FIM.TEMPERATURE,
           top_p: FIXED_MODEL_CONFIG.FIM.TOP_P,
-          presence_penalty: FIXED_MODEL_CONFIG.FIM.PRESENCE_PENALTY
+          presence_penalty: FIXED_MODEL_CONFIG.FIM.PRESENCE_PENALTY,
+          stop
         },
         apiKey,
         baseUrl,

@@ -70,6 +70,169 @@ ${fileContent}
 Complete the code/text at the [CURSOR] position. Return ONLY the completion text.`
 }
 
+// ==================== 低代码上下文 Prompt ====================
+
+export const LOWCODE_CONTEXT_INSTRUCTION = `You are working in a low-code platform environment with specific APIs and data structures.
+
+AVAILABLE RUNTIME APIS (all accessed via 'this.'):
+1. Data Sources (this.dataSource.xxx)
+   - Predefined data models for the application
+   - Access pattern: this.dataSource.<sourceName>
+
+2. Utility Functions (this.utils.xxx)
+   - Common utility methods and npm dependencies
+   - Access pattern: this.utils.<utilityName>
+   - May include imported libraries (check utils metadata for imports)
+
+3. Global State (this.stores.xxx)
+   - Pinia-based global state management
+   - Access pattern: this.stores.<storeName>.<property>
+   - Actions: this.stores.<storeName>.<actionName>()
+
+4. Local State (this.state.xxx)
+   - Component-level reactive state
+   - Access pattern: this.state.<propertyName>
+
+5. Local Methods (this.xxx)
+   - Component-level methods
+   - Access pattern: this.<methodName>()
+
+6. Component References (this.$('refName'))
+   - Access Vue component refs
+   - Access pattern: this.$('<refName>')
+
+IMPORTANT RULES:
+- ONLY use APIs that are explicitly defined in the provided metadata
+- DO NOT reference undefined utilities, data sources, or state properties
+- Follow the JSExpression/JSFunction protocol for dynamic values
+- Use 'function' keyword for function definitions, NOT arrow functions
+- Respect the component schema structure (props, events, refs)
+
+PROTOCOL CONVENTIONS:
+- Static values: { width: '300px' }
+- Dynamic expressions: { width: { type: 'JSExpression', value: 'this.state.xxx' } }
+- Function handlers: { onClick: { type: 'JSFunction', value: 'function onClick() {}' } }`
+
+/**
+ * 构建低代码增强指令（将元数据注入 instruction）
+ */
+export function createLowcodeInstruction(language: string, lowcodeContext: any = {}): string {
+  let instruction = createCodeInstruction(language)
+
+  if (!lowcodeContext || Object.keys(lowcodeContext).length === 0) {
+    return instruction
+  }
+
+  instruction += `\n\n${LOWCODE_CONTEXT_INSTRUCTION}`
+
+  const { dataSource, utils, globalState, state, methods, currentSchema } = lowcodeContext
+
+  if (dataSource?.length > 0) {
+    instruction += `\n\nAVAILABLE DATA SOURCES:\n${JSON.stringify(dataSource, null, 2)}`
+  }
+  if (utils?.length > 0) {
+    instruction += `\n\nAVAILABLE UTILITIES:\n${JSON.stringify(utils, null, 2)}`
+  }
+  if (globalState?.length > 0) {
+    instruction += `\n\nGLOBAL STATE (Pinia Stores):\n${JSON.stringify(globalState, null, 2)}`
+  }
+  if (state && Object.keys(state).length > 0) {
+    instruction += `\n\nLOCAL STATE:\n${JSON.stringify(state, null, 2)}`
+  }
+  if (methods && Object.keys(methods).length > 0) {
+    instruction += `\n\nLOCAL METHODS:\n${JSON.stringify(methods, null, 2)}`
+  }
+  if (currentSchema) {
+    instruction += `\n\nCURRENT COMPONENT: ${currentSchema.componentName || 'Unknown'}`
+    if (currentSchema.props) {
+      instruction += `\n- Props: Use component props as defined in schema`
+      instruction += `\n- Events: Props starting with 'on' are event handlers`
+    }
+    if (currentSchema.ref) {
+      instruction += `\nRef: this.$('${currentSchema.ref}')`
+    }
+  }
+
+  return instruction
+}
+
+// ==================== 代码上下文提取 ====================
+
+const CODE_CONTEXT_PATTERNS = {
+  FUNCTION: /function\s+(\w+)|const\s+(\w+)\s*=.*=>|(\w+)\s*\([^)]*\)\s*{/,
+  CLASS: /class\s+(\w+)/,
+  INTERFACE: /interface\s+(\w+)/,
+  TYPE: /type\s+(\w+)/
+}
+
+/**
+ * 从光标前文本中提取当前代码上下文（函数名、类名等）
+ */
+export function extractCodeContext(textBeforeCursor: string): {
+  functionName: string
+  className: string
+  interfaceName: string
+  typeName: string
+} {
+  const lines = textBeforeCursor.split('\n')
+  let functionName = ''
+  let className = ''
+  let interfaceName = ''
+  let typeName = ''
+
+  const startLine = Math.max(0, lines.length - 20)
+
+  for (let i = lines.length - 1; i >= startLine; i--) {
+    const line = lines[i]
+
+    if (!functionName) {
+      const m = line.match(CODE_CONTEXT_PATTERNS.FUNCTION)
+      if (m) functionName = m[1] || m[2] || m[3]
+    }
+    if (!className) {
+      const m = line.match(CODE_CONTEXT_PATTERNS.CLASS)
+      if (m) className = m[1]
+    }
+    if (!interfaceName) {
+      const m = line.match(CODE_CONTEXT_PATTERNS.INTERFACE)
+      if (m) interfaceName = m[1]
+    }
+    if (!typeName) {
+      const m = line.match(CODE_CONTEXT_PATTERNS.TYPE)
+      if (m) typeName = m[1]
+    }
+
+    if (functionName && className && interfaceName && typeName) break
+  }
+
+  return { functionName, className, interfaceName, typeName }
+}
+
+/**
+ * 构建代码元信息注释（注入到 FIM prefix 前面）
+ */
+export function buildCodeMetaComment(language: string, codeContext: ReturnType<typeof extractCodeContext>): string {
+  let meta = `// Language: ${language}\n`
+
+  if (codeContext.className) {
+    meta += `// Current Class: ${codeContext.className}\n`
+    meta += `// IMPORTANT: Only complete code within this class\n`
+  }
+  if (codeContext.interfaceName) {
+    meta += `// Current Interface: ${codeContext.interfaceName}\n`
+  }
+  if (codeContext.typeName) {
+    meta += `// Current Type: ${codeContext.typeName}\n`
+  }
+  if (codeContext.functionName) {
+    meta += `// Current Function: ${codeContext.functionName}\n`
+    meta += `// IMPORTANT: Only complete code within this function scope\n`
+  }
+
+  meta += `// NOTE: Do not reference variables or code from other functions\n\n`
+  return meta
+}
+
 // ==================== FIM Prompt Builder ====================
 
 export class FIMPromptBuilder {

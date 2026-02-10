@@ -16,13 +16,18 @@ export async function callQwenChat(
 ): Promise<string> {
   const chatUrl = `${baseUrl}${QWEN_CONFIG.CHAT_PATH}`
 
-  const requestBody = {
+  const requestBody: any = {
     model: config.model,
     messages,
     max_tokens: config.maxTokens,
     temperature: config.temperature ?? QWEN_CONFIG.DEFAULT_TEMPERATURE,
     top_p: config.top_p ?? QWEN_CONFIG.TOP_P,
     stream: HTTP_CONFIG.STREAM
+  }
+
+  // 添加 stop sequences（如果提供）
+  if (config.stop && config.stop.length > 0) {
+    requestBody.stop = config.stop
   }
 
   const response = await fetch(chatUrl, {
