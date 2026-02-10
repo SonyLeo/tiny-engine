@@ -11,6 +11,7 @@ import { FIMEngine } from './core/FIMEngine'
 import { NESEngine } from './core/NESEngine'
 import { EditDispatcher } from './core/EditDispatcher'
 import { EditHistoryManager } from './core/EditHistoryManager'
+import { TabKeyHandler } from './utils/TabKeyHandler'
 
 // 加载样式
 import './ui/styles.css'
@@ -23,9 +24,6 @@ export function initAICodeAssistant(
   editor: monaco.editor.IStandaloneCodeEditor,
   config: AICodeAssistantConfig
 ): AICodeAssistant {
-  // eslint-disable-next-line no-console
-  console.log('[AICodeAssistant] 开始初始化，配置:', config)
-
   const finalConfig = {
     ...DEFAULT_CONFIG,
     ...config,
@@ -48,22 +46,12 @@ export function initAICodeAssistant(
     fimEngine = new FIMEngine(editor, finalConfig.language)
     fimEngine.setDispatcher(dispatcher)
     fimEngine.register()
-    // eslint-disable-next-line no-console
-    console.log('[AICodeAssistant] ✅ FIM Engine 已注册')
-  } else {
-    // eslint-disable-next-line no-console
-    console.log('[AICodeAssistant] ⚠️ FIM Engine 未启用')
   }
 
   // 初始化 NES 引擎
   let nesEngine: NESEngine | null = null
   if (finalConfig.nes?.enabled) {
     nesEngine = new NESEngine(editor, finalConfig.nes)
-    // eslint-disable-next-line no-console
-    console.log('[AICodeAssistant] ✅ NES Engine 已初始化')
-  } else {
-    // eslint-disable-next-line no-console
-    console.log('[AICodeAssistant] ⚠️ NES Engine 未启用')
   }
 
   // 注入引擎引用到 Dispatcher
@@ -75,40 +63,60 @@ export function initAICodeAssistant(
     dispatcher.handleEdit(changes)
   })
 
-  // 注册快捷键（NES 相关）
-  if (nesEngine) {
-    // Tab - 接受当前建议
-    editor.onKeyDown((e) => {
-      if (e.keyCode === monaco.KeyCode.Tab && nesEngine!.isActive()) {
+  // ==================== 快捷键处理 ====================
+  // 优先级：Suggest Widget > FIM Inline Completion > NES 建议 > 默认行为
+
+  // Tab - 4 级优先级处理
+  const tabHandler = new TabKeyHandler(editor, {
+    onAcceptNES: nesEngine
+      ? () => {
+          if (nesEngine!.isActive()) {
+            nesEngine!.acceptSuggestion()
+            if (!nesEngine!.isActive()) {
+              dispatcher.handleNESClosed()
+            }
+          }
+        }
+      : undefined
+  })
+
+  editor.onKeyDown((e) => {
+    if (e.keyCode === monaco.KeyCode.Tab) {
+      if (tabHandler.handleTab()) {
         e.preventDefault()
         e.stopPropagation()
-        nesEngine!.acceptSuggestion()
+      }
+    }
+  })
 
-        // 如果 NES 建议全部处理完，通知 Dispatcher
-        if (!nesEngine!.isActive()) {
+  // Esc - 智能处理（onKeyDown 不覆盖 Monaco 默认行为）
+  editor.onKeyDown((e) => {
+    if (e.keyCode !== monaco.KeyCode.Escape) return
+
+    // FIM Ghost Text 存在时不拦截，让 Monaco 自己处理
+    if (fimEngine && fimEngine.hasGhostText()) return
+
+    // NES 激活时关闭 NES
+    if (nesEngine && nesEngine.isActive()) {
+      e.preventDefault()
+      e.stopPropagation()
+      dispatcher.handleNESClosed()
+    }
+  })
+
+  // Alt+N - 跳过 NES 建议（onKeyDown 不覆盖全局快捷键）
+  editor.onKeyDown((e) => {
+    if (e.keyCode === monaco.KeyCode.KeyN && e.altKey && !e.ctrlKey && !e.shiftKey && !e.metaKey) {
+      if (nesEngine && nesEngine.isActive()) {
+        e.preventDefault()
+        e.stopPropagation()
+        nesEngine.skipSuggestion()
+        if (!nesEngine.isActive()) {
           dispatcher.handleNESClosed()
         }
       }
-    })
-
-    // Alt+N - 跳过建议
-    editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyN, () => {
-      if (nesEngine!.isActive()) {
-        nesEngine!.skipSuggestion()
-
-        if (!nesEngine!.isActive()) {
-          dispatcher.handleNESClosed()
-        }
-      }
-    })
-
-    // Esc - 完全关闭 NES
-    editor.addCommand(monaco.KeyCode.Escape, () => {
-      if (nesEngine!.isActive()) {
-        dispatcher.handleNESClosed()
-      }
-    })
-  }
+    }
+  })
 
   return {
     dispose: () => {

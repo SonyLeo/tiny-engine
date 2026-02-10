@@ -13,6 +13,10 @@ export class FIMEngine {
   private dispatcher: EditDispatcher | null = null
   private language: string
 
+  // Ghost Text 状态追踪
+  private ghostTextVisible = false
+  private ghostTextTimestamp = 0
+
   constructor(private editor: monaco.editor.IStandaloneCodeEditor, language: string = 'javascript') {
     this.modelAdapter = new ModelAdapter()
     this.language = language
@@ -26,9 +30,6 @@ export class FIMEngine {
   }
 
   register(): void {
-    // eslint-disable-next-line no-console
-    console.log('[FIMEngine] 注册 inline completion provider...')
-
     // 注册到配置的语言和 typescript
     const languages = [this.language]
     if (this.language !== 'typescript') {
@@ -36,10 +37,16 @@ export class FIMEngine {
     }
 
     const provider = {
-      provideInlineCompletions: async (model, position, context, token) => {
+      provideInlineCompletions: async (
+        model: monaco.editor.ITextModel,
+        position: monaco.Position,
+        _context: monaco.languages.InlineCompletionContext,
+        token: monaco.CancellationToken
+      ) => {
         try {
           // 检查是否被锁定（本地锁 或 Dispatcher 状态锁）
           if (this.fimLocked || this.dispatcher?.isFIMLocked()) {
+            this.ghostTextVisible = false
             return { items: [] }
           }
 
@@ -48,13 +55,6 @@ export class FIMEngine {
 
           const prefix = fullText.substring(0, offset)
           const suffix = fullText.substring(offset)
-
-          // eslint-disable-next-line no-console
-          console.log('[FIMEngine] 触发补全请求:', {
-            position: { line: position.lineNumber, column: position.column },
-            prefixLength: prefix.length,
-            suffixLength: suffix.length
-          })
 
           // 创建 AbortController
           const abortController = new AbortController()
@@ -66,13 +66,19 @@ export class FIMEngine {
           const completion = await this.modelAdapter.callFIM(prefix, suffix, abortController.signal)
 
           if (!completion || completion.trim() === '') {
+            this.ghostTextVisible = false
             return { items: [] }
           }
 
           // 检查后缀重复
           if (this.checkSuffixDuplication(completion, suffix)) {
+            this.ghostTextVisible = false
             return { items: [] }
           }
+
+          // 标记 Ghost Text 可见
+          this.ghostTextVisible = true
+          this.ghostTextTimestamp = Date.now()
 
           return {
             items: [
@@ -91,13 +97,14 @@ export class FIMEngine {
       },
 
       freeInlineCompletions: () => {
-        // Monaco Editor 要求的方法，用于释放补全资源
-        // 当前实现不需要特殊的资源清理
+        // 补全被释放时标记 Ghost Text 消失
+        this.ghostTextVisible = false
       },
 
       handleItemDidShow: () => {
-        // Monaco Editor 可选方法，当补全项显示时调用
-        // 当前实现不需要特殊处理
+        // 补全项显示时更新时间戳
+        this.ghostTextVisible = true
+        this.ghostTextTimestamp = Date.now()
       }
     }
 
@@ -113,6 +120,7 @@ export class FIMEngine {
    */
   lock(): void {
     this.fimLocked = true
+    this.ghostTextVisible = false
     this.clearGhostText()
   }
 
@@ -121,6 +129,28 @@ export class FIMEngine {
    */
   unlock(): void {
     this.fimLocked = false
+  }
+
+  /**
+   * 检查是否有 Ghost Text 正在显示
+   */
+  hasGhostText(): boolean {
+    return this.ghostTextVisible
+  }
+
+  /**
+   * 标记 Ghost Text 已消失（外部调用，如检测到用户接受了 FIM 补全）
+   */
+  markGhostTextGone(): void {
+    this.ghostTextVisible = false
+  }
+
+  /**
+   * 获取 Ghost Text 存活时间（ms）
+   */
+  getGhostTextAge(): number {
+    if (!this.ghostTextVisible || this.ghostTextTimestamp === 0) return Infinity
+    return Date.now() - this.ghostTextTimestamp
   }
 
   /**

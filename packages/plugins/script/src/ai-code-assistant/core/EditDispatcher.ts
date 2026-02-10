@@ -81,9 +81,6 @@ export class EditDispatcher {
     const recentEdits = this.editHistory.getRecentEdits(10)
     const intent = this.classifyIntent(recentEdits)
 
-    // eslint-disable-next-line no-console
-    console.log('[Dispatcher] 意图分类:', intent, '当前状态:', this.state)
-
     switch (intent) {
       case 'NEW_CODE':
         // 用户在写新代码 → FIM 优先，取消 NES debounce
@@ -304,10 +301,7 @@ export class EditDispatcher {
 
   // ==================== 状态机 ====================
 
-  private transition(to: DispatcherState, reason: string): void {
-    const from = this.state
+  private transition(to: DispatcherState, _reason: string): void {
     this.state = to
-    // eslint-disable-next-line no-console
-    console.log(`[Dispatcher] ${from} → ${to} (${reason})`)
   }
 }
