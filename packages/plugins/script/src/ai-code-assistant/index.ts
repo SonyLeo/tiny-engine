@@ -1,6 +1,7 @@
 /**
  * AI Code Assistant - 主入口
  * 支持 FIM（实时补全）和 NES（编辑预测）
+ * 所有协调逻辑由 EditDispatcher 统一管理
  */
 
 import * as monaco from 'monaco-editor'
@@ -16,10 +17,6 @@ import './ui/styles.css'
 
 /**
  * 初始化 AI 代码助手
- * @param monacoInstance Monaco 编辑器模块
- * @param editor Monaco 编辑器实例
- * @param config 配置选项
- * @returns AI 代码助手实例
  */
 export function initAICodeAssistant(
   _monacoInstance: typeof monaco,
@@ -29,7 +26,6 @@ export function initAICodeAssistant(
   // eslint-disable-next-line no-console
   console.log('[AICodeAssistant] 开始初始化，配置:', config)
 
-  // 合并配置
   const finalConfig = {
     ...DEFAULT_CONFIG,
     ...config,
@@ -49,7 +45,8 @@ export function initAICodeAssistant(
   // 初始化 FIM 引擎
   let fimEngine: FIMEngine | null = null
   if (finalConfig.fim?.enabled) {
-    fimEngine = new FIMEngine(editor)
+    fimEngine = new FIMEngine(editor, finalConfig.language)
+    fimEngine.setDispatcher(dispatcher)
     fimEngine.register()
     // eslint-disable-next-line no-console
     console.log('[AICodeAssistant] ✅ FIM Engine 已注册')
@@ -69,90 +66,28 @@ export function initAICodeAssistant(
     console.log('[AICodeAssistant] ⚠️ NES Engine 未启用')
   }
 
-  // 监听编辑事件
-  let debounceTimer: number | null = null
-  let nextEditIsNES = false // 标记下一次编辑是否来自 NES
-  let nesEditProtectionUntil = 0 // NES 编辑保护期（时间戳）
+  // 注入引擎引用到 Dispatcher
+  dispatcher.init(fimEngine, nesEngine, editHistory)
 
-  // 设置 NES 编辑回调
-  if (nesEngine) {
-    nesEngine.setOnEditApplied(() => {
-      nextEditIsNES = true
-      // 设置 2 秒保护期，期间不触发新的 NES 检测
-      nesEditProtectionUntil = Date.now() + 2000
-    })
-  }
-
+  // 监听编辑事件 → 全部委托给 Dispatcher
   model.onDidChangeContent((event) => {
-    // 记录编辑历史（标记来源）
-    const source = nextEditIsNES ? 'nes' : 'user'
-    event.changes.forEach((change) => {
-      editHistory.recordEdit(change, model, source)
-    })
-
-    // 重置标记
-    if (nextEditIsNES) {
-      nextEditIsNES = false
-      return // NES 编辑不触发新的检测
-    }
-
-    // 如果 NES 未启用，直接返回
-    if (!nesEngine || !finalConfig.nes?.enabled) {
-      return
-    }
-
-    // 检查保护期
-    if (Date.now() < nesEditProtectionUntil) {
-      return
-    }
-
-    // 如果 NES 已经激活，不触发新的检测
-    if (nesEngine.isActive()) {
-      return
-    }
-
-    // 防抖处理 NES 检测
-    if (debounceTimer) {
-      clearTimeout(debounceTimer)
-    }
-
-    debounceTimer = window.setTimeout(async () => {
-      const recentEdits = editHistory.getRecentEdits(10)
-
-      // 再次检查 NES 是否激活（防抖期间可能已激活）
-      if (nesEngine!.isActive()) {
-        return
-      }
-
-      // 唤醒 NES
-      await nesEngine!.wakeUp(recentEdits)
-
-      // 更新 Dispatcher 状态（用于锁定 FIM）
-      dispatcher.setNESActive(nesEngine!.isActive())
-
-      // 锁定/解锁 FIM
-      if (fimEngine) {
-        if (nesEngine!.isActive()) {
-          fimEngine.lock()
-        } else {
-          fimEngine.unlock()
-        }
-      }
-    }, finalConfig.nes.debounceMs)
+    const changes = event.changes.map((change) => ({ change, model }))
+    dispatcher.handleEdit(changes)
   })
 
-  // 注册快捷键（只注册 NES 相关的）
+  // 注册快捷键（NES 相关）
   if (nesEngine) {
-    // Tab - 接受当前建议（预览已默认显示）
-    // - 单个建议：接受并关闭 NES
-    // - 多个建议：接受当前，显示下一个预览
+    // Tab - 接受当前建议
     editor.onKeyDown((e) => {
       if (e.keyCode === monaco.KeyCode.Tab && nesEngine!.isActive()) {
         e.preventDefault()
         e.stopPropagation()
-
-        // 直接接受建议（预览已默认显示）
         nesEngine!.acceptSuggestion()
+
+        // 如果 NES 建议全部处理完，通知 Dispatcher
+        if (!nesEngine!.isActive()) {
+          dispatcher.handleNESClosed()
+        }
       }
     })
 
@@ -160,29 +95,26 @@ export function initAICodeAssistant(
     editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.KeyN, () => {
       if (nesEngine!.isActive()) {
         nesEngine!.skipSuggestion()
+
+        if (!nesEngine!.isActive()) {
+          dispatcher.handleNESClosed()
+        }
       }
     })
 
     // Esc - 完全关闭 NES
     editor.addCommand(monaco.KeyCode.Escape, () => {
       if (nesEngine!.isActive()) {
-        nesEngine!.closeCompletely()
-
-        // 解锁 FIM
-        dispatcher.setNESActive(false)
-        if (fimEngine) {
-          fimEngine.unlock()
-        }
+        dispatcher.handleNESClosed()
       }
     })
   }
 
-  // 返回 API
   return {
     dispose: () => {
       if (fimEngine) fimEngine.dispose()
       if (nesEngine) nesEngine.dispose()
-      if (debounceTimer) clearTimeout(debounceTimer)
+      dispatcher.dispose()
     }
   }
 }

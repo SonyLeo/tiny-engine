@@ -9,13 +9,15 @@ import { buildNESUserPrompt, parseNESResponse } from '../prompts/nes-builder'
 import { NES_SYSTEM_PROMPT } from '../prompts/nes-system'
 import { buildLowcodeMetadata, cleanCompletion } from '../utils/code'
 import { callQwenChat } from './QwenClient'
-import { QWEN_CONFIG, FIXED_MODEL_CONFIG, MODEL_CONFIG } from '../config'
+import { QWEN_CONFIG, FIXED_MODEL_CONFIG, HTTP_CONFIG } from '../config'
 
 /**
  * 统一的模型适配器（固定使用 Qwen）
  */
 export class ModelAdapter {
   private fimBuilder: FIMPromptBuilder
+  /** 当前正在进行的 FIM 请求的 AbortController（用于去重） */
+  private pendingFIMAbort: AbortController | null = null
 
   constructor() {
     this.fimBuilder = new FIMPromptBuilder(QWEN_CONFIG)
@@ -23,8 +25,9 @@ export class ModelAdapter {
 
   /**
    * 获取 API 配置（使用固定的 Qwen API 配置）
+   * 返回 null 表示配置不可用（缺少 API Key）
    */
-  private getAPIConfig() {
+  private getAPIConfig(): { apiKey: string; baseUrl: string } | null {
     // 从 meta 中获取 API Key
     const { apiKey: metaApiKey } = getMetaApi(META_SERVICE.Robot).getSelectedQuickModelInfo() || {}
 
@@ -33,11 +36,8 @@ export class ModelAdapter {
     const apiKey = metaApiKey || ''
 
     if (!apiKey) {
-      throw new Error('AI 配置未设置：请在 Robot 插件中配置 API Key')
+      return null
     }
-
-    // eslint-disable-next-line no-console
-    console.log('[ModelAdapter] 使用固定 Qwen API:', baseUrl)
 
     return { apiKey, baseUrl }
   }
@@ -45,9 +45,19 @@ export class ModelAdapter {
   /**
    * FIM 补全（使用 Qwen Chat API + FIM 格式）
    */
-  async callFIM(prefix: string, suffix: string): Promise<string> {
+  async callFIM(prefix: string, suffix: string, signal?: AbortSignal): Promise<string> {
     try {
-      const { apiKey, baseUrl } = this.getAPIConfig()
+      // 去重：取消上一个未完成的 FIM 请求
+      if (this.pendingFIMAbort) {
+        this.pendingFIMAbort.abort()
+      }
+      this.pendingFIMAbort = new AbortController()
+      const dedupeSignal = this.pendingFIMAbort.signal
+
+      const config = this.getAPIConfig()
+      if (!config) return ''
+
+      const { apiKey, baseUrl } = config
       const lowcodeMetadata = buildLowcodeMetadata()
 
       const fimMetadata = {
@@ -73,6 +83,12 @@ export class ModelAdapter {
 
       const instruction = this.fimBuilder.selectInstruction(cursorContext, fimMetadata.language || 'javascript')
 
+      // 合并外部 signal、去重 signal 和超时 signal
+      const timeoutSignal = AbortSignal.timeout(HTTP_CONFIG.FIM_TIMEOUT_MS)
+      const signals = [dedupeSignal, timeoutSignal]
+      if (signal) signals.push(signal)
+      const combinedSignal = AbortSignal.any(signals)
+
       // 使用 Chat API（支持 System Prompt）
       const completionText = await callQwenChat(
         [
@@ -87,34 +103,40 @@ export class ModelAdapter {
           presence_penalty: FIXED_MODEL_CONFIG.FIM.PRESENCE_PENALTY
         },
         apiKey,
-        baseUrl
+        baseUrl,
+        combinedSignal
       )
 
       if (completionText) {
-        return cleanCompletion(completionText, MODEL_CONFIG.QWEN.TYPE, cursorContext)
+        this.pendingFIMAbort = null
+        return cleanCompletion(completionText, 'qwen', cursorContext)
       }
 
+      this.pendingFIMAbort = null
       return ''
-    } catch (error) {
+    } catch (error: any) {
+      this.pendingFIMAbort = null
+      // 取消和超时不需要报错
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        return ''
+      }
       // eslint-disable-next-line no-console
       console.error('[ModelAdapter] FIM error:', error)
-      throw error
+      return ''
     }
   }
 
   /**
    * NES 预测（使用 Qwen Chat API）
    */
-  async callNES(payload: any): Promise<any> {
+  async callNES(payload: any, signal?: AbortSignal): Promise<any> {
     try {
-      const { apiKey, baseUrl } = this.getAPIConfig()
+      const config = this.getAPIConfig()
+      if (!config) {
+        return { predictions: [], totalCount: 0, hasMore: false, requestId: payload.requestId || Date.now() }
+      }
 
-      // eslint-disable-next-line no-console
-      console.log('[ModelAdapter] NES 预测请求:', {
-        codeWindowLength: payload.codeWindow?.length || 0,
-        editHistoryCount: payload.editHistory?.length || 0,
-        windowInfo: payload.windowInfo
-      })
+      const { apiKey, baseUrl } = config
 
       // 构建 NES User Prompt
       const userPrompt = buildNESUserPrompt(
@@ -125,10 +147,9 @@ export class ModelAdapter {
         payload.userFeedback || []
       )
 
-      // eslint-disable-next-line no-console
-      console.log('[ModelAdapter] NES System Prompt 长度:', NES_SYSTEM_PROMPT.length)
-      // eslint-disable-next-line no-console
-      console.log('[ModelAdapter] NES User Prompt 长度:', userPrompt.length)
+      // 合并外部 signal 和超时 signal
+      const timeoutSignal = AbortSignal.timeout(HTTP_CONFIG.NES_TIMEOUT_MS)
+      const combinedSignal = signal ? AbortSignal.any([signal, timeoutSignal]) : timeoutSignal
 
       // 调用 Qwen Chat API
       const result = await callQwenChat(
@@ -144,17 +165,12 @@ export class ModelAdapter {
           presence_penalty: FIXED_MODEL_CONFIG.NES.PRESENCE_PENALTY
         },
         apiKey,
-        baseUrl
+        baseUrl,
+        combinedSignal
       )
-
-      // eslint-disable-next-line no-console
-      console.log('[ModelAdapter] NES 响应长度:', result?.length || 0)
 
       // 解析响应
       const predictions = parseNESResponse(result)
-
-      // eslint-disable-next-line no-console
-      console.log('[ModelAdapter] NES 预测数量:', predictions.length)
 
       return {
         predictions,
@@ -162,10 +178,14 @@ export class ModelAdapter {
         hasMore: false,
         requestId: payload.requestId || Date.now()
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 取消和超时不需要报错
+      if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+        return { predictions: [], totalCount: 0, hasMore: false, requestId: payload.requestId || Date.now() }
+      }
       // eslint-disable-next-line no-console
       console.error('[ModelAdapter] NES error:', error)
-      throw error
+      return { predictions: [], totalCount: 0, hasMore: false, requestId: payload.requestId || Date.now() }
     }
   }
 }

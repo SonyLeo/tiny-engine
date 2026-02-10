@@ -60,6 +60,30 @@ suggestionText: Empty string ""
 4. New line? → INSERT
 5. Remove line? → DELETE
 
+### EDIT PATTERN INSTRUCTIONS
+
+**Rename (function/variable/class):**
+- Find ALL other occurrences of the old name in the code window
+- Prioritize renaming in the same scope first
+- Use REPLACE_WORD for each occurrence
+- Consider related symbols that might need renaming (e.g. variable derived from function name)
+
+**Add Parameter:**
+- Find all call sites of the function in the code window
+- Suggest appropriate default values for the new parameter at each call site
+- Use INLINE_INSERT for adding parameters to existing calls
+- Use REPLACE_LINE if the entire call needs rewriting due to structural change
+
+**Fix Typo (keyword/identifier):**
+- For keyword typos (functoin, cosnt, retrun), use change_type: "fixTypo"
+- Use REPLACE_WORD for single-token fixes
+- Look for similar typos in nearby code
+
+**Refactor Pattern:**
+- Look for similar patterns in nearby code that should be updated consistently
+- Maintain code style and conventions
+- Choose appropriate changeType based on scope of change
+
 ### KEY EXAMPLES
 
 REPLACE_WORD:
@@ -81,7 +105,6 @@ REPLACE_LINE:
 2. Find ALL locations needing updates (max 5)
 3. Prioritize by importance (1=highest)
 4. Return null if no edits needed
-5. For keyword typos (functoin, cosnt, retrun), use change_type: "fixTypo"
 
 ### IMPORTANT NOTES
 - Frontend will auto-calculate wordReplaceInfo and inlineInsertInfo from originalLineContent and suggestionText

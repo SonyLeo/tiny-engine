@@ -4,25 +4,42 @@
 
 import * as monaco from 'monaco-editor'
 import { ModelAdapter } from '../api/ModelAdapter'
+import type { EditDispatcher } from './EditDispatcher'
 
 export class FIMEngine {
   private disposable: monaco.IDisposable | null = null
   private modelAdapter: ModelAdapter
   private fimLocked = false
+  private dispatcher: EditDispatcher | null = null
+  private language: string
 
-  constructor(private editor: monaco.editor.IStandaloneCodeEditor) {
+  constructor(private editor: monaco.editor.IStandaloneCodeEditor, language: string = 'javascript') {
     this.modelAdapter = new ModelAdapter()
+    this.language = language
+  }
+
+  /**
+   * 注入 Dispatcher 引用，FIM 可通过 Dispatcher 查询锁定状态
+   */
+  setDispatcher(dispatcher: EditDispatcher): void {
+    this.dispatcher = dispatcher
   }
 
   register(): void {
     // eslint-disable-next-line no-console
     console.log('[FIMEngine] 注册 inline completion provider...')
 
-    this.disposable = monaco.languages.registerInlineCompletionsProvider('javascript', {
+    // 注册到配置的语言和 typescript
+    const languages = [this.language]
+    if (this.language !== 'typescript') {
+      languages.push('typescript')
+    }
+
+    const provider = {
       provideInlineCompletions: async (model, position, context, token) => {
         try {
-          // 检查是否被锁定
-          if (this.fimLocked) {
+          // 检查是否被锁定（本地锁 或 Dispatcher 状态锁）
+          if (this.fimLocked || this.dispatcher?.isFIMLocked()) {
             return { items: [] }
           }
 
@@ -45,8 +62,8 @@ export class FIMEngine {
             abortController.abort()
           })
 
-          // 调用 API
-          const completion = await this.modelAdapter.callFIM(prefix, suffix)
+          // 调用 API（传递 signal 以支持取消）
+          const completion = await this.modelAdapter.callFIM(prefix, suffix, abortController.signal)
 
           if (!completion || completion.trim() === '') {
             return { items: [] }
@@ -82,7 +99,13 @@ export class FIMEngine {
         // Monaco Editor 可选方法，当补全项显示时调用
         // 当前实现不需要特殊处理
       }
-    })
+    }
+
+    // 为每种语言注册 provider
+    const disposables = languages.map((lang) => monaco.languages.registerInlineCompletionsProvider(lang, provider))
+    this.disposable = {
+      dispose: () => disposables.forEach((d) => d.dispose())
+    }
   }
 
   /**
@@ -101,48 +124,12 @@ export class FIMEngine {
   }
 
   /**
-   * 清除 Ghost Text（强制）
+   * 清除 Ghost Text（使用 Monaco 内置 API）
    */
   private clearGhostText(): void {
     try {
-      // 方法 1: 触发 Escape 键事件（最可靠）
-      this.editor.trigger('keyboard', 'cancelSelection', {})
-
-      // 方法 2: 插入空字符再删除，强制刷新
-      const position = this.editor.getPosition()
-      if (position) {
-        const model = this.editor.getModel()
-        if (model) {
-          // 插入空格
-          model.pushEditOperations(
-            [],
-            [
-              {
-                range: new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column),
-                text: ' '
-              }
-            ],
-            () => null
-          )
-
-          // 立即删除空格
-          setTimeout(() => {
-            const newPos = this.editor.getPosition()
-            if (newPos && model) {
-              model.pushEditOperations(
-                [],
-                [
-                  {
-                    range: new monaco.Range(newPos.lineNumber, newPos.column - 1, newPos.lineNumber, newPos.column),
-                    text: ''
-                  }
-                ],
-                () => null
-              )
-            }
-          }, 0)
-        }
-      }
+      // 使用 Monaco 内置命令隐藏 inline suggestions
+      this.editor.trigger('fim-lock', 'editor.action.inlineSuggest.hide', {})
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('[FIMEngine] Failed to clear Ghost Text:', error)

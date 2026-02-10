@@ -118,12 +118,12 @@ export class DiffCalculator {
     // 尝试检测 REPLACE_WORD
     const wordReplace = this.calculateWordReplace(original, suggested)
     if (wordReplace) {
-      // 检查是否只有一个连续的 token 改变
-      const hasSpaceInWord = wordReplace.word.includes(' ') || wordReplace.replacement.includes(' ')
-      const hasMultipleTokens =
-        wordReplace.word.split(/\s+/).length > 1 || wordReplace.replacement.split(/\s+/).length > 1
+      // 使用 fast-diff 结果判断：如果变更区域是连续的（只有一段 DELETE+INSERT），
+      // 则为单 token 替换。通过检查 word 和 replacement 中是否包含空格来判断
+      // 是否跨越了多个 token 边界。
+      const isContiguousChange = !wordReplace.word.includes(' ') && !wordReplace.replacement.includes(' ')
 
-      if (!hasSpaceInWord && !hasMultipleTokens) {
+      if (isContiguousChange) {
         return {
           changeType: 'REPLACE_WORD',
           wordReplaceInfo: wordReplace

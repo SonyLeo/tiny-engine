@@ -4,14 +4,12 @@
 
 export interface FIMConfig {
   enabled?: boolean
-  debounceMs?: number
   maxTokens?: number
   temperature?: number
 }
 
 export interface NESConfig {
   enabled?: boolean
-  debounceMs?: number
   symptoms?: SymptomType[]
   windowSize?: number
 }
@@ -20,7 +18,6 @@ export interface AICodeAssistantConfig {
   fim?: FIMConfig
   nes?: NESConfig
   language?: string
-  enableSemanticAnalysis?: boolean
 }
 
 export interface AICodeAssistant {
@@ -107,3 +104,22 @@ export interface NESResponse {
   hasMore: boolean
   requestId: number
 }
+
+// ==================== Dispatcher 状态机类型 ====================
+
+/**
+ * Dispatcher 状态
+ * IDLE: 空闲，FIM 可自由触发
+ * NES_PENDING: NES debounce 中，FIM 仍可工作
+ * NES_DIAGNOSING: NES 正在请求 API，FIM 被锁定
+ * NES_SUGGESTING: NES 正在展示建议，FIM 被锁定
+ */
+export type DispatcherState = 'IDLE' | 'NES_PENDING' | 'NES_DIAGNOSING' | 'NES_SUGGESTING'
+
+/**
+ * 编辑意图分类
+ * NEW_CODE: 用户在写新代码（行尾连续插入）→ FIM 优先
+ * REFACTORING: 用户在重构（重命名、改参数等）→ NES 优先
+ * UNCERTAIN: 无法确定 → FIM 先行，NES 延迟触发
+ */
+export type EditIntent = 'NEW_CODE' | 'REFACTORING' | 'UNCERTAIN'

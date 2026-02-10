@@ -126,15 +126,23 @@ export function parseNESResponse(response: string): any[] {
       return []
     }
 
-    return parsed.predictions.map((pred: any) => ({
-      targetLine: pred.targetLine,
-      originalLineContent: pred.originalLineContent,
-      suggestionText: pred.suggestionText,
-      explanation: pred.explanation,
-      confidence: pred.confidence || 0.5,
-      priority: pred.priority || 2,
-      changeType: pred.changeType || 'REPLACE_LINE'
-    }))
+    return parsed.predictions
+      .filter((pred: any) => {
+        // 校验必填字段
+        if (typeof pred.targetLine !== 'number' || pred.targetLine < 1) return false
+        if (typeof pred.suggestionText !== 'string') return false
+        if (typeof pred.explanation !== 'string') return false
+        return true
+      })
+      .map((pred: any) => ({
+        targetLine: pred.targetLine,
+        originalLineContent: pred.originalLineContent || '',
+        suggestionText: pred.suggestionText,
+        explanation: pred.explanation,
+        confidence: typeof pred.confidence === 'number' ? pred.confidence : 0.5,
+        priority: typeof pred.priority === 'number' ? pred.priority : 2,
+        changeType: pred.changeType || 'REPLACE_LINE'
+      }))
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('[NESBuilder] Failed to parse NES response:', error)

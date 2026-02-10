@@ -9,6 +9,7 @@ import { SymptomDetector } from '../utils/symptom'
 import { SuggestionQueue } from '../ui/SuggestionQueue'
 import { NESRenderer } from '../ui/NESRenderer'
 import { DiffCalculator } from '../utils/diff'
+import { CoordinateAdjuster } from '../utils/coordinate'
 import { ModelAdapter } from '../api/ModelAdapter'
 
 export class NESEngine {
@@ -63,8 +64,8 @@ export class NESEngine {
       }
       this.abortController = new AbortController()
 
-      // 调用 ModelAdapter 的 NES 方法
-      const data = await this.modelAdapter.callNES(payload)
+      // 调用 ModelAdapter 的 NES 方法（传递 signal 以支持取消）
+      const data = await this.modelAdapter.callNES(payload, this.abortController.signal)
 
       // 处理预测结果
       if (data.predictions && data.predictions.length > 0) {
@@ -112,8 +113,15 @@ export class NESEngine {
       return priorityB - priorityA
     })
 
+    // 坐标修正：过滤掉无法定位的 predictions
+    const adjusted = CoordinateAdjuster.adjustAll(sorted, model)
+    if (adjusted.length === 0) {
+      this.sleep()
+      return
+    }
+
     // 一次性加入队列（传入整个数组）
-    this.suggestionQueue.enqueue(sorted)
+    this.suggestionQueue.enqueue(adjusted)
 
     this.state = 'SUGGESTING'
     this.showFirstSuggestion()
@@ -123,28 +131,45 @@ export class NESEngine {
    * 显示第一个建议（直接显示预览）
    */
   private showFirstSuggestion(): void {
-    const prediction = this.suggestionQueue.peek()
-    if (prediction) {
-      // 计算进度
-      const current = this.suggestionQueue.getCurrentIndex() + 1
-      const total = this.suggestionQueue.size()
-      const progress = total > 1 ? `${current}/${total}` : undefined
+    const model = this.editor.getModel()
+    if (!model) return
 
-      // 直接显示预览（优化：不需要两次 Tab）
-      this.renderer.renderSuggestion(prediction)
-      this.renderer.showPreview(prediction)
-      this.renderer.showHintBar(prediction.targetLine, prediction.explanation, true, progress)
+    let prediction = this.suggestionQueue.peek()
+    if (!prediction) return
 
-      // 跳转到建议位置
-      this.editor.setPosition({
-        lineNumber: prediction.targetLine,
-        column: 1
-      })
-      this.editor.revealLineInCenter(prediction.targetLine)
-
-      // 设置预览状态为已展开
-      this.previewShown = true
+    // 重新校验坐标（用户可能在上一个建议后继续编辑）
+    const adjusted = CoordinateAdjuster.adjust(prediction, model)
+    if (!adjusted) {
+      // 当前建议无法定位，跳过并尝试下一个
+      this.suggestionQueue.dequeue()
+      if (this.suggestionQueue.peek()) {
+        this.showFirstSuggestion()
+      } else {
+        this.sleep()
+      }
+      return
     }
+    prediction = adjusted
+
+    // 计算进度
+    const current = this.suggestionQueue.getCurrentIndex() + 1
+    const total = this.suggestionQueue.size()
+    const progress = total > 1 ? `${current}/${total}` : undefined
+
+    // 直接显示预览（优化：不需要两次 Tab）
+    this.renderer.renderSuggestion(prediction)
+    this.renderer.showPreview(prediction)
+    this.renderer.showHintBar(prediction.targetLine, prediction.explanation, true, progress)
+
+    // 跳转到建议位置
+    this.editor.setPosition({
+      lineNumber: prediction.targetLine,
+      column: 1
+    })
+    this.editor.revealLineInCenter(prediction.targetLine)
+
+    // 设置预览状态为已展开
+    this.previewShown = true
   }
 
   /**

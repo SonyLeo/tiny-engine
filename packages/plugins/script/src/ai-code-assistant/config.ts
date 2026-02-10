@@ -8,28 +8,29 @@
 export const DEFAULT_CONFIG = {
   fim: {
     enabled: true,
-    debounceMs: 300,
     maxTokens: 64,
     temperature: 0.2
   },
   nes: {
     enabled: true,
-    debounceMs: 3000,
     windowSize: 30
   },
-  language: 'javascript',
-  enableSemanticAnalysis: true
+  language: 'javascript'
 }
 
-export const TIME_CONFIG = {
-  LOCK_DURATION_MS: 500,
-  LAYOUT_DELAY_MS: 50
-}
+// ==================== Dispatcher 配置 ====================
 
-export const WINDOW_CONFIG = {
-  WINDOW_SIZE: 30,
-  MAX_PREDICTIONS: 5,
-  MAX_EDIT_HISTORY: 10
+export const DISPATCHER_CONFIG = {
+  /** NES debounce 时间（意图为 REFACTORING 时） */
+  NES_DEBOUNCE_REFACTORING_MS: 1000,
+  /** NES debounce 时间（意图为 UNCERTAIN 时） */
+  NES_DEBOUNCE_UNCERTAIN_MS: 2000,
+  /** NES 应用编辑后的保护期（期间不触发新 NES） */
+  NES_EDIT_PROTECTION_MS: 1500,
+  /** 连续插入字符数阈值，超过此值判定为 NEW_CODE */
+  NEW_CODE_CHAR_THRESHOLD: 4,
+  /** 意图分类的时间窗口（只看此窗口内的编辑） */
+  INTENT_WINDOW_MS: 3000
 }
 
 // ==================== 模型配置 ====================
@@ -40,7 +41,6 @@ export const WINDOW_CONFIG = {
 export const FIXED_MODEL_CONFIG = {
   FIM: {
     MODEL: 'qwen2.5-coder-32b-instruct',
-    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/completions',
     MAX_TOKENS: 48,
     TEMPERATURE: 0,
     TOP_P: 0.95,
@@ -48,7 +48,6 @@ export const FIXED_MODEL_CONFIG = {
   },
   NES: {
     MODEL: 'qwen3-coder-plus',
-    API_URL: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
     MAX_TOKENS: 1024,
     TEMPERATURE: 0.1,
     TOP_P: 0.95,
@@ -57,7 +56,6 @@ export const FIXED_MODEL_CONFIG = {
 }
 
 export const QWEN_CONFIG = {
-  COMPLETION_PATH: '/completions',
   CHAT_PATH: '/chat/completions',
   DEFAULT_TEMPERATURE: 0,
   TOP_P: 0.95,
@@ -68,43 +66,17 @@ export const QWEN_CONFIG = {
   }
 }
 
-export const DEEPSEEK_CONFIG = {
-  COMPLETION_PATH: '/beta',
-  PATH_REPLACE: '/v1',
-  DEFAULT_TEMPERATURE: 0,
-  TOP_P: 1.0,
-  FIM: {
-    MAX_PREFIX_LINES: 100,
-    MAX_SUFFIX_LINES: 50,
-    MAX_TOKENS: 4096
-  }
-}
-
-export const MODEL_CONFIG = {
-  QWEN: {
-    TYPE: 'qwen',
-    KEYWORDS: ['qwen']
-  },
-  DEEPSEEK: {
-    TYPE: 'deepseek',
-    KEYWORDS: ['deepseek']
-  },
-  UNKNOWN: {
-    TYPE: 'unknown',
-    KEYWORDS: []
-  }
-}
-
 export const HTTP_CONFIG = {
   METHOD: 'POST',
   CONTENT_TYPE: 'application/json',
-  STREAM: false
+  STREAM: false,
+  /** FIM 请求超时（ms） */
+  FIM_TIMEOUT_MS: 5000,
+  /** NES 请求超时（ms） */
+  NES_TIMEOUT_MS: 15000
 }
 
 export const ERROR_MESSAGES = {
-  CONFIG_MISSING: 'AI 配置未设置（缺少 model/apiKey/baseUrl）',
-  NO_COMPLETION: '未收到有效的补全结果',
-  REQUEST_FAILED: '请求失败',
   QWEN_API_ERROR: 'Qwen API 错误'
 }
 
@@ -122,47 +94,4 @@ export const FIM_CONFIG = {
     // 通用标记
     CURSOR: '[CURSOR]'
   }
-}
-
-/**
- * FIM 停止符配置（限制 16 个以内）
- * 用于 Qwen FIM Completions API
- */
-export const FIM_STOP_SEQUENCES = [
-  ' {',
-  '\n{',
-  ';',
-  '\n\n',
-  '\n}',
-  '\nfunction ',
-  '\nclass ',
-  '\nconst ',
-  '\nlet ',
-  '\nexport ',
-  '\nimport ',
-  '\n//',
-  '```'
-] // 总计: 14 个停止符
-
-/**
- * Chat API 停止符配置
- * 用于 Qwen Chat API（NES 预测不需要停止符）
- */
-export const CHAT_STOP_SEQUENCES: string[] = []
-
-/**
- * 代码上下文分析配置
- */
-export const CONTEXT_CONFIG = {
-  MAX_LINES_TO_SCAN: 20
-}
-
-/**
- * 代码模式匹配（JS/TS）
- */
-export const CODE_PATTERNS = {
-  FUNCTION: /function\s+(\w+)|const\s+(\w+)\s*=.*=>|(\w+)\s*\([^)]*\)\s*{/,
-  CLASS: /class\s+(\w+)/,
-  INTERFACE: /interface\s+(\w+)/,
-  TYPE: /type\s+(\w+)/
 }
